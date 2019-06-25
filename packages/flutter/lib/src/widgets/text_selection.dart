@@ -800,6 +800,173 @@ class _TextSelectionHandleOverlayState
   }
 }
 
+/// An interface to receive gesture handler from [EditableTextSelectionHandlerProvider].
+abstract class EditableTextGestureDetectorClient {
+  /// Abstract const constructor. This constructor enables subclasses to provide
+  /// const constructors so that they can be used in const expressions.
+  const EditableTextGestureDetectorClient();
+
+  /// Key to Underlining [RenderEditable].
+  GlobalKey get editableKey;
+
+  /// Whether force press is enabled.
+  bool get forcePressEnabled;
+
+  /// Whether selection is enabled.
+  bool get selectionEnabled;
+}
+
+/// A provider that provide basic selection handler for [TextSelectionGestureDetector].
+class EditableTextSelectionHandlerProvider {
+  /// Create a [EditableTextSelectionHandlerProvider].
+  EditableTextSelectionHandlerProvider({
+    @required this.client,
+  }) : assert(client != null);
+
+  /// The client to be provided handler for.
+  final EditableTextGestureDetectorClient client;
+
+  /// Whether to show selection tool bar.
+  bool shouldShowSelectionToolbar = true;
+
+  /// The [State] of underlying [EditableText].
+  EditableTextState get editableText => client.editableKey.currentState;
+
+  /// The underlying [RenderEditable].
+  RenderEditable get renderEditable => editableText.renderEditable;
+
+  /// Handler callback that will be passed into [TextSelectionGestureDetector.onTapDown].
+  void onTapDown(TapDownDetails details) {
+    renderEditable.handleTapDown(details);
+    // The selection overlay should only be shown when the user is interacting
+    // through a touch screen (via either a finger or a stylus). A mouse shouldn't
+    // trigger the selection overlay.
+    // For backwards-compatibility, we treat a null kind the same as touch.
+    final PointerDeviceKind kind = details.kind;
+    shouldShowSelectionToolbar =
+        kind == null ||
+            kind == PointerDeviceKind.touch ||
+            kind == PointerDeviceKind.stylus;
+  }
+
+  /// Handler callback that will be passed into [TextSelectionGestureDetector.onForcePressStart].
+  void onForcePressStart(ForcePressDetails details) {
+    if (client.selectionEnabled) {
+      renderEditable.selectWordsInRange(
+        from: details.globalPosition,
+        cause: SelectionChangedCause.forcePress,
+      );
+    }
+  }
+
+  /// Handler callback that will be passed into [TextSelectionGestureDetector.onForcePressEnd].
+  void onForcePressEnd(ForcePressDetails details) {
+    renderEditable.selectWordsInRange(
+      from: details.globalPosition,
+      cause: SelectionChangedCause.forcePress,
+    );
+    if (shouldShowSelectionToolbar)
+      editableText.showToolbar();
+  }
+
+  /// Handler callback that will be passed into [TextSelectionGestureDetector.onSingleTapUp].
+  void onSingleTapUp(TapUpDetails details) {
+    if (client.selectionEnabled) {
+      renderEditable.selectWordEdge(cause: SelectionChangedCause.tap);
+    }
+  }
+
+  /// Handler callback that will be passed into [TextSelectionGestureDetector.onSingleTapCancel].
+  void onSingleTapCancel() {
+    // Subclass should override this method if needed.
+  }
+
+  /// Handler callback that will be passed into [TextSelectionGestureDetector.onSingleLongTapStart].
+  void onSingleLongTapStart(LongPressStartDetails details) {
+    if (client.selectionEnabled) {
+      renderEditable.selectPositionAt(
+        from: details.globalPosition,
+        cause: SelectionChangedCause.longPress,
+      );
+    }
+  }
+
+  /// Handler callback that will be passed into [TextSelectionGestureDetector.onSingleLongTapMoveUpdate].
+  void onSingleLongTapMoveUpdate(LongPressMoveUpdateDetails details) {
+    if (client.selectionEnabled) {
+      renderEditable.selectPositionAt(
+        from: details.globalPosition,
+        cause: SelectionChangedCause.longPress,
+      );
+    }
+  }
+
+  /// Handler callback that will be passed into [TextSelectionGestureDetector.onSingleLongTapEnd].
+  void onSingleLongTapEnd(LongPressEndDetails details) {
+    if (shouldShowSelectionToolbar)
+      editableText.showToolbar();
+  }
+
+  /// Handler callback that will be passed into [TextSelectionGestureDetector.onDoubleTapDown].
+  void onDoubleTapDown(TapDownDetails details) {
+    if (client.selectionEnabled) {
+      renderEditable.selectWord(cause: SelectionChangedCause.tap);
+      if (shouldShowSelectionToolbar)
+        editableText.showToolbar();
+    }
+  }
+
+  /// Handler callback that will be passed into [TextSelectionGestureDetector.onDragSelectionStart].
+  void onDragSelectionStart(DragStartDetails details) {
+    renderEditable.selectPositionAt(
+      from: details.globalPosition,
+      cause: SelectionChangedCause.drag,
+    );
+  }
+
+  /// Handler callback that will be passed into [TextSelectionGestureDetector.onDragSelectionUpdate].
+  void onDragSelectionUpdate(
+      DragStartDetails startDetails,
+      DragUpdateDetails updateDetails,
+      ) {
+    renderEditable.selectPositionAt(
+      from: startDetails.globalPosition,
+      to: updateDetails.globalPosition,
+      cause: SelectionChangedCause.drag,
+    );
+  }
+
+  /// Handler callback that will be passed into [TextSelectionGestureDetector.onDragSelectionEnd].
+  void onDragSelectionEnd(DragEndDetails details) {
+    // Subclass should override this method if needed.
+  }
+
+  /// Build a [TextSelectionGestureDetector] with this handler provider.
+  Widget buildGestureDetector({
+    Key key,
+    HitTestBehavior behavior,
+    Widget child
+  }) {
+    return TextSelectionGestureDetector(
+      key: key,
+      onTapDown: onTapDown,
+      onForcePressStart: client.forcePressEnabled ? onForcePressStart : null,
+      onForcePressEnd: client.forcePressEnabled ? onForcePressEnd : null,
+      onSingleTapUp: onSingleTapUp,
+      onSingleTapCancel: onSingleTapCancel,
+      onSingleLongTapStart: onSingleLongTapStart,
+      onSingleLongTapMoveUpdate: onSingleLongTapMoveUpdate,
+      onSingleLongTapEnd: onSingleLongTapEnd,
+      onDoubleTapDown: onDoubleTapDown,
+      onDragSelectionStart: onDragSelectionStart,
+      onDragSelectionUpdate: onDragSelectionUpdate,
+      onDragSelectionEnd: onDragSelectionEnd,
+      behavior: behavior,
+      child: child,
+    );
+  }
+}
+
 /// A gesture detector to respond to non-exclusive event chains for a text field.
 ///
 /// An ordinary [GestureDetector] configured to handle events like tap and

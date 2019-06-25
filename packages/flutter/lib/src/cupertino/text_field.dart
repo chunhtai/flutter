@@ -68,6 +68,27 @@ enum OverlayVisibilityMode {
   always,
 }
 
+class _CupertinoTextFieldSelectionHandlerProvider extends EditableTextSelectionHandlerProvider {
+  _CupertinoTextFieldSelectionHandlerProvider({
+    @required _CupertinoTextFieldState client
+  }) : super(client: client);
+
+  @override
+  void onSingleTapUp(TapUpDetails details) {
+    super.onSingleTapUp(details);
+    final _CupertinoTextFieldState state = client;
+    state._requestKeyboard();
+    if (state.widget.onTap != null)
+      state.widget.onTap();
+  }
+
+  @override
+  void onDragSelectionEnd(DragEndDetails details) {
+    final _CupertinoTextFieldState state = client;
+    state._requestKeyboard();
+  }
+}
+
 /// An iOS-style text field.
 ///
 /// A text field lets the user enter text, either with a hardware keyboard or with
@@ -494,7 +515,7 @@ class CupertinoTextField extends StatefulWidget {
   }
 }
 
-class _CupertinoTextFieldState extends State<CupertinoTextField> with AutomaticKeepAliveClientMixin {
+class _CupertinoTextFieldState extends State<CupertinoTextField> with AutomaticKeepAliveClientMixin implements EditableTextGestureDetectorClient {
   final GlobalKey<EditableTextState> _editableTextKey = GlobalKey<EditableTextState>();
 
   TextEditingController _controller;
@@ -503,17 +524,25 @@ class _CupertinoTextFieldState extends State<CupertinoTextField> with AutomaticK
   FocusNode _focusNode;
   FocusNode get _effectiveFocusNode => widget.focusNode ?? (_focusNode ??= FocusNode());
 
-  // The selection overlay should only be shown when the user is interacting
-  // through a touch screen (via either a finger or a stylus). A mouse shouldn't
-  // trigger the selection overlay.
-  // For backwards-compatibility, we treat a null kind the same as touch.
-  bool _shouldShowSelectionToolbar = true;
-
   bool _showSelectionHandles = false;
+
+  _CupertinoTextFieldSelectionHandlerProvider _selectionHandlerProvider;
+
+  // API for EditableTextGestureDetectorClient.
+  @override
+  bool get forcePressEnabled => true;
+
+  @override
+  GlobalKey get editableKey => _editableTextKey;
+
+  @override
+  bool get selectionEnabled => widget.selectionEnabled;
+  // End of API for EditableTextGestureDetectorClient.
 
   @override
   void initState() {
     super.initState();
+    _selectionHandlerProvider = _CupertinoTextFieldSelectionHandlerProvider(client: this);
     if (widget.controller == null) {
       _controller = TextEditingController();
       _controller.addListener(updateKeepAlive);
@@ -549,85 +578,10 @@ class _CupertinoTextFieldState extends State<CupertinoTextField> with AutomaticK
     _editableText?.requestKeyboard();
   }
 
-  RenderEditable get _renderEditable => _editableText.renderEditable;
-
-  void _handleTapDown(TapDownDetails details) {
-    _renderEditable.handleTapDown(details);
-
-    // The selection overlay should only be shown when the user is interacting
-    // through a touch screen (via either a finger or a stylus). A mouse shouldn't
-    // trigger the selection overlay.
-    // For backwards-compatibility, we treat a null kind the same as touch.
-    final PointerDeviceKind kind = details.kind;
-    _shouldShowSelectionToolbar =
-        kind == null ||
-        kind == PointerDeviceKind.touch ||
-        kind == PointerDeviceKind.stylus;
-  }
-
-  void _handleForcePressStarted(ForcePressDetails details) {
-    if (widget.selectionEnabled) {
-      _renderEditable.selectWordsInRange(
-        from: details.globalPosition,
-        cause: SelectionChangedCause.forcePress,
-      );
-    }
-  }
-
-  void _handleForcePressEnded(ForcePressDetails details) {
-    _renderEditable.selectWordsInRange(
-      from: details.globalPosition,
-      cause: SelectionChangedCause.forcePress,
-    );
-    if (_shouldShowSelectionToolbar)
-      _editableText.showToolbar();
-  }
-
-  void _handleSingleTapUp(TapUpDetails details) {
-    if (widget.selectionEnabled) {
-      _renderEditable.selectWordEdge(cause: SelectionChangedCause.tap);
-    }
-    _requestKeyboard();
-    if (widget.onTap != null) {
-      widget.onTap();
-    }
-  }
-
-  void _handleSingleLongTapStart(LongPressStartDetails details) {
-    if (widget.selectionEnabled) {
-      _renderEditable.selectPositionAt(
-        from: details.globalPosition,
-        cause: SelectionChangedCause.longPress,
-      );
-    }
-  }
-
-  void _handleSingleLongTapMoveUpdate(LongPressMoveUpdateDetails details) {
-    if (widget.selectionEnabled) {
-      _renderEditable.selectPositionAt(
-        from: details.globalPosition,
-        cause: SelectionChangedCause.longPress,
-      );
-    }
-  }
-
-  void _handleSingleLongTapEnd(LongPressEndDetails details) {
-    if (_shouldShowSelectionToolbar)
-      _editableText.showToolbar();
-  }
-
-  void _handleDoubleTapDown(TapDownDetails details) {
-    if (widget.selectionEnabled) {
-      _renderEditable.selectWord(cause: SelectionChangedCause.tap);
-      if (_shouldShowSelectionToolbar)
-        _editableText.showToolbar();
-    }
-  }
-
   bool _shouldShowSelectionHandles(SelectionChangedCause cause) {
     // When the text field is activated by something that doesn't trigger the
     // selection overlay, we shouldn't show the handles either.
-    if (!_shouldShowSelectionToolbar)
+    if (!_selectionHandlerProvider.shouldShowSelectionToolbar)
       return false;
 
     // On iOS, we don't show handles when the selection is collapsed.
@@ -641,28 +595,6 @@ class _CupertinoTextFieldState extends State<CupertinoTextField> with AutomaticK
       return true;
 
     return false;
-  }
-
-  void _handleMouseDragSelectionStart(DragStartDetails details) {
-    _renderEditable.selectPositionAt(
-      from: details.globalPosition,
-      cause: SelectionChangedCause.drag,
-    );
-  }
-
-  void _handleMouseDragSelectionUpdate(
-      DragStartDetails startDetails,
-      DragUpdateDetails updateDetails,
-  ) {
-    _renderEditable.selectPositionAt(
-      from: startDetails.globalPosition,
-      to: updateDetails.globalPosition,
-      cause: SelectionChangedCause.drag,
-    );
-  }
-
-  void _handleMouseDragSelectionEnd(DragEndDetails details) {
-    _requestKeyboard();
   }
 
   void _handleSelectionChanged(TextSelection selection, SelectionChangedCause cause) {
@@ -825,18 +757,7 @@ class _CupertinoTextFieldState extends State<CupertinoTextField> with AutomaticK
       ? widget.decoration
       : widget.decoration?.copyWith(color: widget.decoration?.color ?? disabledColor);
 
-    final Widget paddedEditable = TextSelectionGestureDetector(
-      onTapDown: _handleTapDown,
-      onForcePressStart: _handleForcePressStarted,
-      onForcePressEnd: _handleForcePressEnded,
-      onSingleTapUp: _handleSingleTapUp,
-      onSingleLongTapStart: _handleSingleLongTapStart,
-      onSingleLongTapMoveUpdate: _handleSingleLongTapMoveUpdate,
-      onSingleLongTapEnd: _handleSingleLongTapEnd,
-      onDoubleTapDown: _handleDoubleTapDown,
-      onDragSelectionStart: _handleMouseDragSelectionStart,
-      onDragSelectionUpdate: _handleMouseDragSelectionUpdate,
-      onDragSelectionEnd: _handleMouseDragSelectionEnd,
+    final Widget paddedEditable = _selectionHandlerProvider.buildGestureDetector(
       behavior: HitTestBehavior.translucent,
       child: Padding(
         padding: widget.padding,
