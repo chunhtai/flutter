@@ -2031,22 +2031,24 @@ class NavigatorState extends State<Navigator> with TickerProviderStateMixin {
     // Now that the list is clean, send the didChangeNext/didChangePrevious
     // notifications.
     index = _getPresentIndexBefore(_history.length - 1);
-    entry = null;
-    previous = _history[index];
-    while (index >= 0) {
-      next = entry;
-      entry = previous;
-      index = _getPresentIndexBefore(index - 1);
-      previous = index >= 0 ? _history[index] : null;
-      if (next?.route != entry.lastAnnouncedNextRoute) {
-        if (entry.shouldAnnounceChangeToNext(next?.route)) {
-          entry.route.didChangeNext(next?.route);
+    if (index != -1) {
+      entry = null;
+      previous = _history[index];
+      while (index >= 0) {
+        next = entry;
+        entry = previous;
+        index = _getPresentIndexBefore(index - 1);
+        previous = index >= 0 ? _history[index] : null;
+        if (next?.route != entry.lastAnnouncedNextRoute) {
+          if (entry.shouldAnnounceChangeToNext(next?.route)) {
+            entry.route.didChangeNext(next?.route);
+          }
+          entry.lastAnnouncedNextRoute = next?.route;
         }
-        entry.lastAnnouncedNextRoute = next?.route;
-      }
-      if (previous?.route != entry.lastAnnouncedPreviousRoute) {
-        entry.route.didChangePrevious(previous?.route);
-        entry.lastAnnouncedPreviousRoute = previous?.route;
+        if (previous?.route != entry.lastAnnouncedPreviousRoute) {
+          entry.route.didChangePrevious(previous?.route);
+          entry.lastAnnouncedPreviousRoute = previous?.route;
+        }
       }
     }
     // Lastly, dispose all marked entries.
