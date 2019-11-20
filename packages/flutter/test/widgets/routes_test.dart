@@ -28,16 +28,15 @@ class TestRoute extends Route<String> with LocalHistoryRoute<String> {
   }
 
   @override
-  void install(OverlayEntry insertionPoint) {
+  void install({ bool isInitialRoute = false }) {
     log('install');
     final OverlayEntry entry = OverlayEntry(
       builder: (BuildContext context) => Container(),
       opaque: true,
     );
     _entries.add(entry);
-    navigator.overlay?.insert(entry, above: insertionPoint);
     routes.add(this);
-    super.install(insertionPoint);
+    super.install(isInitialRoute: isInitialRoute);
   }
 
   @override
@@ -110,10 +109,6 @@ void main() {
     expect(settings, hasOneLineDescription);
     final RouteSettings settings2 = settings.copyWith(name: 'B');
     expect(settings2.name, 'B');
-    expect(settings2.isInitialRoute, false);
-    final RouteSettings settings3 = settings2.copyWith(isInitialRoute: true);
-    expect(settings3.name, 'B');
-    expect(settings3.isInitialRoute, true);
   });
 
   testWidgets('Route settings arguments', (WidgetTester tester) async {
@@ -133,7 +128,7 @@ void main() {
     expect(settings4.arguments, isNot(same(arguments)));
   });
 
-  testWidgets('Route management - push, replace, pop', (WidgetTester tester) async {
+  testWidgets('Route management - push, replace, pop sequence', (WidgetTester tester) async {
     final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
     await tester.pumpWidget(
       Directionality(
@@ -160,7 +155,7 @@ void main() {
       tester,
       host,
       () { host.push(second = TestRoute('second')); },
-      <String>[
+      <String>[ // stack is: initial, second
         'second: install',
         'second: didPush',
         'second: didChangeNext null',
@@ -171,7 +166,7 @@ void main() {
       tester,
       host,
       () { host.push(TestRoute('third')); },
-      <String>[
+      <String>[ // stack is: initial, second, third
         'third: install',
         'third: didPush',
         'third: didChangeNext null',
@@ -182,7 +177,7 @@ void main() {
       tester,
       host,
       () { host.replace(oldRoute: second, newRoute: TestRoute('two')); },
-      <String>[
+      <String>[ // stack is: initial, two, third
         'two: install',
         'two: didReplace second',
         'two: didChangeNext third',
@@ -194,20 +189,20 @@ void main() {
       tester,
       host,
       () { host.pop('hello'); },
-      <String>[
+      <String>[ // stack is: initial, two
         'third: didPop hello',
-        'third: dispose',
         'two: didPopNext third',
+        'third: dispose',
       ],
     );
     await runNavigatorTest(
       tester,
       host,
       () { host.pop('good bye'); },
-      <String>[
+      <String>[ // stack is: initial
         'two: didPop good bye',
-        'two: dispose',
         'initial: didPopNext two',
+        'two: dispose',
       ],
     );
     await tester.pumpWidget(Container());
@@ -275,8 +270,8 @@ void main() {
       () { host.pop('good bye'); },
       <String>[
         'third: didPop good bye',
-        'third: dispose',
         'second: didPopNext third',
+        'third: dispose',
       ],
     );
     await runNavigatorTest(
@@ -317,8 +312,8 @@ void main() {
       () { host.pop('the end'); },
       <String>[
         'four: didPop the end',
-        'four: dispose',
         'second: didPopNext four',
+        'four: dispose',
       ],
     );
     await tester.pumpWidget(Container());
@@ -392,8 +387,8 @@ void main() {
       () { host.popUntil((Route<dynamic> route) => route == routeB); },
       <String>[
         'C: didPop null',
-        'C: dispose',
         'b: didPopNext C',
+        'C: dispose',
       ],
     );
     await tester.pumpWidget(Container());
