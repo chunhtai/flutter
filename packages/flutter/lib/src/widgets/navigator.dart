@@ -50,6 +50,15 @@ typedef RoutePredicate = bool Function(Route<dynamic> route);
 /// [ModalRoute.removeScopedWillPopCallback], and [WillPopScope].
 typedef WillPopCallback = Future<bool> Function();
 
+/// Signature for the [Navigator.onPopPage] callback.
+///
+/// The callback must call [Route.didPop] or [Route.didComplete] on the
+/// specified route, and must [setState] so that the [Navigator] is updated with
+/// a [Navigator.pages] list that no longer includes the corresponding [Page].
+/// (Otherwise, the page will be interpreted as a new page to show when the
+/// [Navigator.pages] list is next updated.)
+typedef OnPopPageCallback = bool Function(Route<dynamic> route, dynamic result);
+
 /// Indicates whether the current route should be popped.
 ///
 /// Used as the return value for [Route.willPop].
@@ -110,7 +119,7 @@ abstract class Route<T> {
   ///
   /// If the [settings] are not provided, an empty [RouteSettings] object is
   /// used instead.
-  Route({ RouteSettings settings }) : settings = settings ?? const RouteSettings();
+  Route({ RouteSettings settings }) : _settings = settings ?? const RouteSettings();
 
   /// The navigator that the route is in, if any.
   NavigatorState get navigator => _navigator;
@@ -119,7 +128,26 @@ abstract class Route<T> {
   /// The settings for this route.
   ///
   /// See [RouteSettings] for details.
-  final RouteSettings settings;
+  ///
+  /// The settings can change during the route's lifetime. If the settings
+  /// change, the route's overlays will be marked dirty (see
+  /// [changedInternalState]).
+  ///
+  /// If the route is created from a [Page] in the [Navigator.pages] list, then
+  /// this will be a [Page] subclass, and it will be updated each time the
+  /// [Navigator] is rebuilt with a new
+  /// [pages] list. Once the [Route] is removed from the history, this value
+  /// stops updating (and remains with its last value).
+  RouteSettings get settings => _settings;
+  RouteSettings _settings;
+
+  void _updateSettings(RouteSettings newSettings) {
+    assert(newSettings != null);
+    if (_settings != newSettings) {
+      _settings = newSettings;
+      changedInternalState();
+    }
+  }
 
   /// The overlay entries of this route.
   ///
@@ -473,6 +501,39 @@ class RouteSettings {
   String toString() => '${objectRuntimeType(this, 'RouteSettings')}("$name", $arguments)';
 }
 
+/// Describes the configuration of a [Route].
+///
+/// The type argument `T` is the corresponding [Route]'s return type, as
+/// used by [Route.currentResult], [Route.popped], and [Route.didPop].
+abstract class Page<T> extends RouteSettings {
+  /// Initializes [key] for subclasses.
+  ///
+  /// The [arguments] argument must not be null.
+  const Page({
+    this.key,
+    String name,
+    Object arguments,
+  }) : super(name: name, arguments: arguments);
+
+  /// The key associates with this page.
+  ///
+  /// This key will be used for comparing pages in [canUpdate].
+  final LocalKey key;
+
+  /// Whether this page can be updated with the [other] page.
+  ///
+  /// Two pages are consider updatable if they have same [runtimeType] and [key].
+  bool canUpdate(Page<dynamic> other) {
+    return other.runtimeType == runtimeType &&
+      other.key == key;
+  }
+
+  /// Create the [Route] that corresponds to this page.
+  ///
+  /// The created [Route] must have its [Route.settings] property set to this [Page].
+  Route<T> createRoute(BuildContext context);
+}
+
 /// An interface for observing the behavior of a [Navigator].
 class NavigatorObserver {
   /// The navigator that the observer is observing, if any.
@@ -515,6 +576,45 @@ class NavigatorObserver {
   ///
   /// Paired with an earlier call to [didStartUserGesture].
   void didStopUserGesture() { }
+}
+
+/// The delegate class to customize page transition sequence of a navigator.
+abstract class TransitionDelegate {
+  /// Creates a delegate.
+  const TransitionDelegate();
+// xxx
+}
+
+/// The default delegate class to customize page transition sequence of a navigator.
+class DefaultTransitionDelegate extends TransitionDelegate {
+  /// Creates a default delegate.
+  const DefaultTransitionDelegate();
+// xxx
+}
+
+// A record used only during [NavigatorState._updatePages] for
+// tracking routes that are likely about to be removed.
+class _SkippedRouteEntry {
+  _SkippedRouteEntry({ @required this.entry, @required this.savePoint }) : assert(entry.hasPage);
+
+  // The route that is probably being removed.
+  final _RouteEntry entry;
+
+  // The route after which we'll insert ourselves as we await our eventual
+  // demise if we are not rescued.
+  //
+  // The null value means at the start of the history.
+  final _RouteEntry savePoint;
+
+  // The list of routes whose lifecycle has been pinned to ours (these are
+  // routes without pages).
+  final List<_RouteEntry> subsidiaryEntries = <_RouteEntry>[];
+
+  void remove() {
+    entry.remove();
+    for (_RouteEntry subsidiaryEntry in subsidiaryEntries)
+      subsidiaryEntry.remove();
+  }
 }
 
 /// A widget that manages a set of child widgets with a stack discipline.
@@ -888,13 +988,58 @@ class Navigator extends StatefulWidget {
   /// The [onGenerateRoute] argument must not be null.
   const Navigator({
     Key key,
+    this.pages = const <Page<dynamic>>[],
+    this.onPopPage,
     this.initialRoute,
     this.onGenerateInitialRoutes = Navigator.defaultGenerateInitialRoutes,
     this.onGenerateRoute,
     this.onUnknownRoute,
+    this.transitionDelegate = const DefaultTransitionDelegate(),
     this.observers = const <NavigatorObserver>[],
-  }) : assert(onGenerateInitialRoutes != null),
+  }) : assert(pages != null),
+       assert(onGenerateInitialRoutes != null),
+       assert(transitionDelegate != null),
+       assert(observers != null),
        super(key: key);
+
+  /// The list of pages with which to populate the history.
+  ///
+  /// Pages are turned into routes using [Page.createRoute] in a manner
+  /// analogous to how [Widget]s are turned into [Element]s (and [State]s or
+  /// [RenderObject]s) using [Widget.createElement] (and
+  /// [StatefulWidget.createState] or [RenderObjectWidget.createRenderObject]).
+  ///
+  /// When this list is updated, the new list is compared to the previous
+  /// list and the set of routes is updated accordingly.
+  ///
+  /// Some [Route]s do not correspond to [Page] objects, namely, those that are
+  /// added to the history using the [Navigator] API ([push] and friends). A
+  /// [Route] that does not correspond to a [Page] object is tied to the [Route]
+  /// that _does_ correspond to a [Page] object that is below it in the history.
+  ///
+  /// Pages that are removed (and any routes that were pushed over those pages
+  /// using [push] and friends, which are also removed) may be animated; this is
+  /// controlled by the [transitionDelegate].
+  ///
+  /// If [initialRoute] is non-null when the widget is first created, then
+  /// [onGenerateInitialRoutes] is used to generate routes that are above those
+  /// corresponding to [pages] in the initial history.
+  final List<Page<dynamic>> pages;
+
+  /// Called when [pop] is invoked but the current [Route] corresponds to a
+  /// [Page] found in the [pages] list.
+  ///
+  /// The `result` argument is the value with which the route is to complete
+  /// (e.g. the value returned from a dialog).
+  ///
+  /// The [Navigator] widget should be rebuilt with a [pages] list that does not
+  /// contain the [Page] for the given [Route]. The next time the [pages] list
+  /// is updated, if the [Page] corresponding to this [Route] is still present,
+  /// it will be interpreted as a new route to display.
+  final OnPopPageCallback onPopPage;
+
+  /// The delegate to customize the transition for added/removed [pages]
+  final TransitionDelegate transitionDelegate;
 
   /// The name of the first route to show.
   ///
@@ -1776,9 +1921,20 @@ class _RouteEntry {
   final Route<dynamic> route;
 
   _RouteLifecycle currentState;
-  Route<dynamic> lastAnnouncedNextRoute; // last argument to Route.didChangeNext
   Route<dynamic> lastAnnouncedPreviousRoute; // last argument to Route.didChangePrevious
   Route<dynamic> lastAnnouncedPoppedNextRoute; // last argument to Route.didPopNext
+  Route<dynamic> lastAnnouncedNextRoute; // last argument to Route.didChangeNext
+
+  bool get hasPage => route.settings is Page;
+
+  bool canUpdateFrom(Page<dynamic> page) {
+    if (currentState.index > _RouteLifecycle.idle.index)
+      return false;
+    if (!hasPage)
+      return false;
+    final Page<dynamic> routePage = route.settings as Page<dynamic>;
+    return page.canUpdate(routePage);
+  }
 
   void handleAdd({ @required NavigatorState navigator, @required bool isNewFirst, @required Route<dynamic> previous, @required Route<dynamic> previousPresent }) {
     assert(currentState == _RouteLifecycle.add);
@@ -1939,7 +2095,7 @@ class _RouteEntry {
 /// The state for a [Navigator] widget.
 class NavigatorState extends State<Navigator> with TickerProviderStateMixin {
   final GlobalKey<OverlayState> _overlayKey = GlobalKey<OverlayState>();
-  final List<_RouteEntry> _history = <_RouteEntry>[];
+  List<_RouteEntry> _history = <_RouteEntry>[];
 
   /// The [FocusScopeNode] for the [FocusScope] that encloses the routes.
   final FocusScopeNode focusScopeNode = FocusScopeNode(debugLabel: 'Navigator Scope');
@@ -2009,8 +2165,196 @@ class NavigatorState extends State<Navigator> with TickerProviderStateMixin {
       yield* entry.route.overlayEntries;
   }
 
+  bool _debugUpdatingPage = false;
+
+  void _updatePagesNew() {
+    assert(() {
+      assert(!_debugUpdatingPage);
+      _debugUpdatingPage = true;
+    }());
+    int newPagesTop = 0;
+    int oldEntriesTop = 0;
+    int newPagesBottom = widget.pages.length - 1;
+    int oldEntriesBottom = _history.length - 1;
+
+    final List<_RouteEntry> newHistoryTop = <_RouteEntry>[];
+
+    // Updates the top of the list.
+    while (oldEntriesTop <= oldEntriesBottom) {
+      final _RouteEntry oldEntry = _history[oldEntriesTop];
+      assert(oldEntry != null && oldEntry.currentState != _RouteLifecycle.disposed);
+      // Flushes all consecutive pageless routes to the new history.
+      // This serves two purpose:
+      // 1. The Leading pageless routes are always put to the beginning of the
+      //    new history
+      // 2. Any consecutive pageless routes follows a page will stay with the
+      //    page.
+      if (!oldEntry.hasPage) {
+        newHistoryTop.add(oldEntry);
+        oldEntriesTop += 1;
+        continue;
+      }
+
+      if (newPagesTop <= newPagesBottom)
+        break;
+      final Page<dynamic> newPage = widget.pages[newPagesTop];
+      if (!oldEntry.canUpdateFrom(newPage))
+        break;
+      oldEntry.route._updateSettings(newPage);
+      newHistoryTop.add(oldEntry);
+      newPagesTop += 1;
+      oldEntriesTop += 1;
+    }
+
+    // We stores the bottom of the history in reversed order to avoid iterate
+    // bottom of _history twice.
+    final List<_RouteEntry> newHistoryBottomReversed = <_RouteEntry>[];
+    int pagelessRoutesToSkip = 0;
+    // Updates the bottom of the list.
+    while ((oldEntriesTop <= oldEntriesBottom) && (newPagesTop <= newPagesBottom)) {
+      final _RouteEntry oldEntry = _history[oldEntriesBottom];
+      assert(oldEntry != null && oldEntry.currentState != _RouteLifecycle.disposed);
+      if (!oldEntry.hasPage) {
+        // This route might need to be skipped if we can not find a page above.
+        pagelessRoutesToSkip += 1;
+        newHistoryBottomReversed.add(oldEntry);
+        oldEntriesBottom -= 1;
+        continue;
+      }
+      final Page<dynamic> newPage = widget.pages[newPagesBottom];
+      if (!oldEntry.canUpdateFrom(newPage))
+        break;
+      // We found the page for all the consecutive pageless routes below. Those
+      // pageless routes do not need to be skipped.
+      pagelessRoutesToSkip = 0;
+      oldEntry.route._updateSettings(newPage);
+      newHistoryBottomReversed.add(oldEntry);
+      oldEntriesBottom -= 1;
+      newPagesBottom -= 1;
+    }
+
+    
+    
+    
+    if (newHistoryBottomReversed.length > pagelessRoutesToSkip) {
+      int bottom = newHistoryBottomReversed.length -1;
+      while(bottom >= pagelessRoutesToSkip) {
+        newHistoryTop.add(newHistoryBottomReversed[bottom]);
+        bottom -= 1;
+      }
+    }
+    _history = newHistoryTop;
+    assert(() {
+      _debugUpdatingPage = false;
+    }());
+    _flushHistoryUpdates();
+  }
+
+  void _updatePages() {
+    int oldIndex = 0;
+    int newIndex = 0;
+    final List<_RouteEntry> newHistory = <_RouteEntry>[];
+    final List<_SkippedRouteEntry> skippedEntries = <_SkippedRouteEntry>[];
+    loop: while (true) {
+      final _RouteEntry entry = _history[oldIndex];
+      // Is the next entry we have yet to look at a page-less route associated with the last paged route?
+      if (entry != null && !entry.hasPage) {
+        // It is! Copy it into the new history verbatim.
+        // Routes without pages at the very start of the history are always kept around.
+        newHistory.add(entry);
+        oldIndex += 1;
+        continue loop;
+      }
+      assert(entry == null || entry.hasPage);
+      // Have we reached the end of the new pages list?
+      if (widget.pages.length <= newIndex) {
+        break loop; // This is the loop's only exit point.
+      }
+      final Page<dynamic> page = widget.pages[newIndex];
+      assert(page != null);
+      // Does this page match a route we skipped earlier in this process?
+      for (_SkippedRouteEntry oldEntry in skippedEntries) {
+        if (oldEntry.entry.canUpdateFrom(page)) {
+          // It does! Copy that route into the new history (with all its subsidiary entries).
+          skippedEntries.remove(oldEntry);
+          newHistory.add(oldEntry.entry);
+          oldEntry.entry.route._updateSettings(page);
+          newHistory.addAll(oldEntry.subsidiaryEntries);
+          newIndex += 1;
+          continue loop;
+        }
+      }
+      assert(!skippedEntries.any((_SkippedRouteEntry oldEntry) => oldEntry.entry.canUpdateFrom(page)));
+      // Have we run out of old route entries to examine?
+      if (entry == null) {
+        // We have. Create a new route from this page.
+        final Route<dynamic> newRoute = page.createRoute(context);
+        assert(newRoute.settings == page);
+        final _RouteEntry newEntry = _RouteEntry(
+          newRoute,
+          initialState: _RouteLifecycle.add,
+        );
+        newHistory.add(newEntry);
+        continue loop;
+      }
+      assert(entry != null);
+      // We still have old route entries to examine.
+      // Does this page match the next entry we have yet to look at in the old history?
+      if (entry.canUpdateFrom(page)) {
+        // It does! Copy that route into the new history.
+        newHistory.add(entry);
+        entry.route._updateSettings(page);
+        oldIndex += 1;
+        newIndex += 1;
+        continue loop;
+      }
+      assert(!entry.canUpdateFrom(page));
+      // If we reach here, we have a page that does not match the next entry in
+      // the old history. We have to bring that old route, and any of its
+      // associated page-less routes, into the skippedEntries list, then try
+      // again.
+      final _SkippedRouteEntry skippedEntry = _SkippedRouteEntry(entry: entry, savePoint: newHistory.last);
+      skippedEntries.add(skippedEntry);
+      oldIndex += 1;
+      while (oldIndex < _history.length && !_history[oldIndex].hasPage) {
+        skippedEntry.subsidiaryEntries.add(_history[oldIndex]);
+        oldIndex += 1;
+      }
+    } // loop
+    // We reach here when the loop above hits the "break loop" line.
+    assert(newIndex >= widget.pages.length);
+    assert(oldIndex >= _history.length || _history[oldIndex].hasPage);
+    // Deal with the popped entries (those that were on the end of the history but are now missing).
+    for (int index = _history.length - 1; index >= oldIndex; index -= 1) {
+      final _RouteEntry entry = _history[index];
+      entry.pop<Null>(null);
+      newHistory.add(entry);
+    }
+    // Deal with the skipped entries.
+    final Map<_RouteEntry, List<_RouteEntry>> skippedEntriesBySavePoint = <_RouteEntry, List<_RouteEntry>>{};
+    for (_SkippedRouteEntry skippedEntry in skippedEntries) {
+      skippedEntry.remove();
+      skippedEntriesBySavePoint.putIfAbsent(skippedEntry.savePoint, () => <_RouteEntry>[])
+        ..add(skippedEntry.entry)
+        ..addAll(skippedEntry.subsidiaryEntries);
+    }
+    // Now merge the new history with the doomed routes.
+    _history.clear();
+    if (skippedEntriesBySavePoint.containsKey(null)) {
+      // Add entries we skipped at the very start of the list first.
+      _history.addAll(skippedEntriesBySavePoint[null]);
+    }
+    for (_RouteEntry entry in newHistory) {
+      // Add each entry in the new list followed by any skipped entries that were associated with it.
+      _history.add(entry);
+      final List<_RouteEntry> skippedEntries = skippedEntriesBySavePoint[entry];
+      if (skippedEntries != null)
+        _history.addAll(skippedEntries);
+    }
+  }
+
   void _flushHistoryUpdates({bool rearrangeOverlay = true}) {
-    assert(_debugLocked);
+    assert(_debugLocked && !_debugUpdatingPage);
     // Clean up the list, sending updates to the routes that changed. Notably,
     // we don't send the didChangePrevious/didChangeNext updates to those that
     // did not change at this point, because we're not yet sure exactly what the
