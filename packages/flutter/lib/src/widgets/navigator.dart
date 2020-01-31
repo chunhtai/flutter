@@ -141,6 +141,8 @@ abstract class Route<T> {
   RouteSettings get settings => _settings;
   RouteSettings _settings;
 
+  _RouteEntry _entry;
+
   void _updateSettings(RouteSettings newSettings) {
     assert(newSettings != null);
     if (_settings != newSettings) {
@@ -579,14 +581,22 @@ class NavigatorObserver {
 }
 
 /// The delegate class to customize page transition sequence of a navigator.
-abstract class TransitionDelegate {
+abstract class TransitionDelegate<T> {
   /// Creates a delegate.
   const TransitionDelegate();
-// xxx
+
+  /// Resolves conflicts
+  Iterable<Route<T>> resolve({
+    List<Route<T>> enteringPageRoutes,
+    List<Route<T>> existingPageRoutes,
+    List<Route<T>> precedingRoutes,
+    List<Route<T>> succeedingRoutes,
+    Map<Route<T>, Iterable<Route<T>>> pageRouteToPagelessRoutes,
+  });
 }
 
 /// The default delegate class to customize page transition sequence of a navigator.
-class DefaultTransitionDelegate extends TransitionDelegate {
+class DefaultTransitionDelegate<T> extends TransitionDelegate<T> {
   /// Creates a default delegate.
   const DefaultTransitionDelegate();
 // xxx
@@ -1916,7 +1926,9 @@ class _RouteEntry {
            initialState == _RouteLifecycle.pushReplace ||
            initialState == _RouteLifecycle.replace
          ),
-         currentState = initialState; // ignore: prefer_initializing_formals
+         currentState = initialState {
+    route._entry = this;
+  } // ignore: prefer_initializing_formals
 
   final Route<dynamic> route;
 
@@ -2206,18 +2218,15 @@ class NavigatorState extends State<Navigator> with TickerProviderStateMixin {
       oldEntriesTop += 1;
     }
 
-    // We stores the bottom of the history in reversed order to avoid iterate
-    // bottom of _history twice.
-    final List<_RouteEntry> newHistoryBottomReversed = <_RouteEntry>[];
     int pagelessRoutesToSkip = 0;
-    // Updates the bottom of the list.
+    // Scans the bottom of the list until we found a page route that cannot be
+    // updated.
     while ((oldEntriesTop <= oldEntriesBottom) && (newPagesTop <= newPagesBottom)) {
       final _RouteEntry oldEntry = _history[oldEntriesBottom];
       assert(oldEntry != null && oldEntry.currentState != _RouteLifecycle.disposed);
       if (!oldEntry.hasPage) {
         // This route might need to be skipped if we can not find a page above.
         pagelessRoutesToSkip += 1;
-        newHistoryBottomReversed.add(oldEntry);
         oldEntriesBottom -= 1;
         continue;
       }
@@ -2227,21 +2236,42 @@ class NavigatorState extends State<Navigator> with TickerProviderStateMixin {
       // We found the page for all the consecutive pageless routes below. Those
       // pageless routes do not need to be skipped.
       pagelessRoutesToSkip = 0;
-      oldEntry.route._updateSettings(newPage);
-      newHistoryBottomReversed.add(oldEntry);
       oldEntriesBottom -= 1;
       newPagesBottom -= 1;
     }
+    // Reverts the pageless routes that cannot be updated.
+    oldEntriesBottom += pagelessRoutesToSkip;
 
-    
-    
-    
-    if (newHistoryBottomReversed.length > pagelessRoutesToSkip) {
-      int bottom = newHistoryBottomReversed.length -1;
-      while(bottom >= pagelessRoutesToSkip) {
-        newHistoryTop.add(newHistoryBottomReversed[bottom]);
-        bottom -= 1;
+
+
+    // We've scanned the whole list.
+    assert(oldEntriesTop == oldEntriesBottom + 1);
+    assert(newPagesTop == newPagesBottom + 1);
+    newPagesBottom = widget.pages.length - 1;
+    oldEntriesBottom = _history.length - 1;
+    // Verifies we either reach the end or the oldEntriesTop must be updatable
+    // by newPagesTop.
+    assert(() {
+      if (oldEntriesTop <= oldEntriesBottom)
+        return newPagesTop <= newPagesBottom &&
+          _history[oldEntriesTop].hasPage &&
+          _history[oldEntriesTop].canUpdateFrom(widget.pages[newPagesBottom]);
+      else
+        return newPagesTop > newPagesBottom;
+    }());
+
+    // Updates the bottom of the list.
+    while ((oldEntriesTop <= oldEntriesBottom) && (newPagesTop <= newPagesBottom)) {
+      final _RouteEntry oldEntry = _history[oldEntriesTop];
+      assert(oldEntry != null && oldEntry.currentState != _RouteLifecycle.disposed);
+      if (!oldEntry.hasPage) {
+        newHistoryTop.add(oldEntry);
+        continue;
       }
+      final Page<dynamic> newPage = widget.pages[newPagesTop];
+      assert(oldEntry.canUpdateFrom(newPage));
+      oldEntriesTop += 1;
+      newPagesTop += 1;
     }
     _history = newHistoryTop;
     assert(() {
