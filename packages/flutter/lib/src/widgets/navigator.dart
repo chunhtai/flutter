@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'dart:async';
+import 'dart:collection' show HashMap;
 import 'dart:convert';
 import 'dart:developer' as developer;
 
@@ -584,46 +585,174 @@ class NavigatorObserver {
 abstract class TransitionDelegate<T> {
   /// Creates a delegate.
   const TransitionDelegate();
+  /// Pushes the route with transition.
+  @protected
+  void push(Route<T> route) {
+    assert(route._entry.currentState == _RouteLifecycle.idle);
+    route._entry.currentState = _RouteLifecycle.push;
+  }
+
+  /// Pushes the route without transition.
+  @protected
+  void add(Route<T> route) {
+    assert(route._entry.currentState == _RouteLifecycle.idle);
+    route._entry.currentState = _RouteLifecycle.add;
+  }
+
+  /// Pops the route with transition.
+  @protected
+  void pop(Route<T> route, [T result]) {
+    assert(route._entry.currentState == _RouteLifecycle.idle);
+    route._entry.pop<T>(result);
+  }
+
+  /// Completes the route without transition.
+  @protected
+  void complete(Route<T> route, [T result]) {
+    assert(route._entry.currentState == _RouteLifecycle.idle);
+    route._entry.complete<T>(result);
+  }
+
+  /// Removes the route without transition.
+  @protected
+  void remove(Route<T> route) {
+    assert(route._entry.currentState == _RouteLifecycle.idle);
+    route._entry.remove();
+  }
+
+  Iterable<_RouteEntry> _transition({
+    List<Route<T>> enteringPageRoutes,
+    List<Route<T>> exitingPageRoutes,
+    List<Route<T>> precedingRoutes,
+    List<Route<T>> succeedingRoutes,
+    Map<Route<T>, List<Route<T>>> pageRouteToPagelessRoutes,
+  }) {
+    final List<Route<T>> results = resolve(
+      enteringPageRoutes: enteringPageRoutes,
+      exitingPageRoutes: exitingPageRoutes,
+      precedingRoutes: precedingRoutes,
+      succeedingRoutes: succeedingRoutes,
+      pageRouteToPagelessRoutes: pageRouteToPagelessRoutes,
+    ).toList(growable: false);
+    // Verifies the integrity after the decisions has made.
+    //
+    // Here are the rules:
+    // - All the entering routes must either be pushed or added.
+    // - All the exiting routes must either be popped or removed.
+    // - All the pageless routes must either be popped or removed.
+    // - All the entering/exiting routes in the result must have the same order
+    //   as enteringPageRoutes/exitingPageRoutes.
+    //     ex:
+    //
+    //     enteringPageRoutes = [A, B]
+    //
+    //     exitingPageRoutes = [C, D]
+    //
+    //     results = [B, A ,C ,D] is not valid because B must be after A.
+    assert(() {
+      int indexOfNextEnteringRoute = 0;
+      int indexOfNextExitingRoute = 0;
+      int indexToVerify = 0;
+      while(indexToVerify <= results.length - 1) {
+        final Route<T> route = results[indexToVerify];
+        assert(route != null);
+        final Route<T> nextEnteringRoute = indexOfNextEnteringRoute <= enteringPageRoutes.length - 1 ?
+          enteringPageRoutes[indexOfNextEnteringRoute] :
+          null;
+        final Route<T> nextExitingRoute = indexOfNextExitingRoute <= enteringPageRoutes.length - 1 ?
+          enteringPageRoutes[indexOfNextExitingRoute] :
+          null;
+
+        if (nextEnteringRoute == route) {
+          assert(
+            route._entry.currentState == _RouteLifecycle.push ||
+            route._entry.currentState == _RouteLifecycle.add
+          );
+          indexOfNextEnteringRoute += 1;
+        } else if (nextExitingRoute == route){
+          assert(
+            route._entry.currentState == _RouteLifecycle.pop ||
+            route._entry.currentState == _RouteLifecycle.remove
+          );
+          if (pageRouteToPagelessRoutes.containsKey(route)) {
+            final List<Route<T>> pagelessRoutes = pageRouteToPagelessRoutes[route];
+            for (final Route<T> pagelessRoute in pagelessRoutes) {
+              assert(
+                pagelessRoute._entry.currentState == _RouteLifecycle.pop ||
+                pagelessRoute._entry.currentState == _RouteLifecycle.remove
+              );
+            }
+          }
+          indexOfNextExitingRoute += 1;
+        } else {
+          assert(false);
+        }
+        indexToVerify += 1;
+      }
+      // Verifies the results contains all input page routes.
+      assert(
+       indexOfNextEnteringRoute == enteringPageRoutes.length &&
+       indexOfNextExitingRoute == exitingPageRoutes.length
+      );
+    }());
+
+    return results.map((Route<T> route) => route._entry);
+  }
 
   /// Resolves conflicts
   Iterable<Route<T>> resolve({
     List<Route<T>> enteringPageRoutes,
-    List<Route<T>> existingPageRoutes,
+    List<Route<T>> exitingPageRoutes,
     List<Route<T>> precedingRoutes,
     List<Route<T>> succeedingRoutes,
-    Map<Route<T>, Iterable<Route<T>>> pageRouteToPagelessRoutes,
+    Map<Route<T>, List<Route<T>>> pageRouteToPagelessRoutes,
   });
 }
 
 /// The default delegate class to customize page transition sequence of a navigator.
 class DefaultTransitionDelegate<T> extends TransitionDelegate<T> {
   /// Creates a default delegate.
-  const DefaultTransitionDelegate();
-// xxx
-}
+  const DefaultTransitionDelegate(): super();
 
-// A record used only during [NavigatorState._updatePages] for
-// tracking routes that are likely about to be removed.
-class _SkippedRouteEntry {
-  _SkippedRouteEntry({ @required this.entry, @required this.savePoint }) : assert(entry.hasPage);
+  @override
+  Iterable<Route<T>> resolve({
+    List<Route<T>> enteringPageRoutes,
+    List<Route<T>> exitingPageRoutes,
+    List<Route<T>> precedingRoutes,
+    List<Route<T>> succeedingRoutes,
+    Map<Route<T>, List<Route<T>>> pageRouteToPagelessRoutes,
+  }) {
+    bool haveSeenTop = succeedingRoutes.isNotEmpty;
+    for (final Route<T> entering in enteringPageRoutes) {
+      if (!haveSeenTop && entering == enteringPageRoutes.last) {
+        push(entering);
+        haveSeenTop = true;
+      }
+      else
+        add(entering);
+    }
+    for (final Route<T> exiting in exitingPageRoutes) {
+      final bool lastExiting = exiting == exitingPageRoutes.last;
+      if (!haveSeenTop && lastExiting && !pageRouteToPagelessRoutes.containsKey(exiting)) {
+        pop(exiting, exiting.currentResult);
+        haveSeenTop = true;
+        continue;
+      }
+      complete(exiting, exiting.currentResult);
+      if (pageRouteToPagelessRoutes.containsKey(exiting)) {
+        final List<Route<T>> pagelessRoutes = pageRouteToPagelessRoutes[exiting];
+        for(final Route<T> pagelessRoute in pagelessRoutes) {
+          if (!haveSeenTop && lastExiting && pagelessRoutes.last == pagelessRoute) {
+            pop(pagelessRoute, pagelessRoute.currentResult);
+            haveSeenTop = true;
+          }
+          else
+            complete(pagelessRoute, pagelessRoute.currentResult);
+        }
+      }
 
-  // The route that is probably being removed.
-  final _RouteEntry entry;
-
-  // The route after which we'll insert ourselves as we await our eventual
-  // demise if we are not rescued.
-  //
-  // The null value means at the start of the history.
-  final _RouteEntry savePoint;
-
-  // The list of routes whose lifecycle has been pinned to ours (these are
-  // routes without pages).
-  final List<_RouteEntry> subsidiaryEntries = <_RouteEntry>[];
-
-  void remove() {
-    entry.remove();
-    for (_RouteEntry subsidiaryEntry in subsidiaryEntries)
-      subsidiaryEntry.remove();
+    }
+    return exitingPageRoutes + enteringPageRoutes;
   }
 }
 
@@ -1004,7 +1133,7 @@ class Navigator extends StatefulWidget {
     this.onGenerateInitialRoutes = Navigator.defaultGenerateInitialRoutes,
     this.onGenerateRoute,
     this.onUnknownRoute,
-    this.transitionDelegate = const DefaultTransitionDelegate(),
+    this.transitionDelegate = const DefaultTransitionDelegate<dynamic>(),
     this.observers = const <NavigatorObserver>[],
   }) : assert(pages != null),
        assert(onGenerateInitialRoutes != null),
@@ -2121,8 +2250,11 @@ class NavigatorState extends State<Navigator> with TickerProviderStateMixin {
       assert(observer.navigator == null);
       observer._navigator = this;
     }
-    // TODO(chunhtai): Uses pages after we add page api.
-    // https://github.com/flutter/flutter/issues/45938
+    if (widget.pages.isNotEmpty) {
+      _updatePages();
+      return;
+    }
+
     _history.addAll(
       widget.onGenerateInitialRoutes(this, widget.initialRoute ?? Navigator.defaultRouteName)
         .map((Route<dynamic> route) => _RouteEntry(
@@ -2148,6 +2280,11 @@ class NavigatorState extends State<Navigator> with TickerProviderStateMixin {
         observer._navigator = this;
       }
     }
+    if (oldWidget.pages != widget.pages) {
+      _updatePages();
+      return;
+    }
+
     for (final _RouteEntry entry in _history)
       entry.route.changedExternalState();
   }
@@ -2179,7 +2316,7 @@ class NavigatorState extends State<Navigator> with TickerProviderStateMixin {
 
   bool _debugUpdatingPage = false;
 
-  void _updatePagesNew() {
+  void _updatePages() {
     assert(() {
       assert(!_debugUpdatingPage);
       _debugUpdatingPage = true;
@@ -2242,14 +2379,139 @@ class NavigatorState extends State<Navigator> with TickerProviderStateMixin {
     // Reverts the pageless routes that cannot be updated.
     oldEntriesBottom += pagelessRoutesToSkip;
 
+    // Scans middle of the old list.
+    int oldEntriesTopToScan = oldEntriesTop;
+    final Map<LocalKey, _RouteEntry> pageKeyToOldRoute = <LocalKey, _RouteEntry>{};
+    final Map<Route<dynamic>, List<Route<dynamic>>> pageRouteToPagelessRoutes =
+      <Route<dynamic>, List<Route<dynamic>>>{};
+    Route<dynamic> previousPageRoute;
+    while (oldEntriesTopToScan <= oldEntriesBottom) {
+      final _RouteEntry oldEntry = _history[oldEntriesBottom];
+      assert(
+        oldEntry != null &&
+        oldEntry.currentState != _RouteLifecycle.disposed
+      );
+      oldEntriesTopToScan += 1;
+      if (!oldEntry.hasPage) {
+        assert(previousPageRoute != null);
+        final List<Route<dynamic>> pagelessRoutes = pageRouteToPagelessRoutes
+          .putIfAbsent(
+            previousPageRoute,
+            () => <Route<dynamic>>[]
+          );
+        pagelessRoutes.add(oldEntry.route);
+        continue;
+      }
+      // The oldEntry should be a page route at this point.
+      previousPageRoute = oldEntry.route;
+      final Page<dynamic> page = previousPageRoute.settings as Page<dynamic>;
+      // Page with key will be removed regardless.
+      if (page.key == null)
+        continue;
 
+      assert(!pageKeyToOldRoute.containsKey(page.key));
+      pageKeyToOldRoute[page.key] = oldEntry;
+    }
+
+    // Scans middle of the new list.
+    int newPagesTopToScan = newPagesTop;
+    final Map<LocalKey, Page<dynamic>> pageKeyToNewPage = <LocalKey, Page<dynamic>>{};
+    while (newPagesTopToScan <= newPagesBottom) {
+      final Page<dynamic> page = widget.pages[newPagesTopToScan];
+      if (page.key != null) {
+        assert(!pageKeyToNewPage.containsKey(page.key), 'Duplicated page key.');
+        pageKeyToNewPage[page.key] = page;
+      }
+      newPagesTopToScan += 1;
+    }
+
+    // Updates the middle of the list.
+    //
+    // The idea is to find two pages in the new page list that has corresponding
+    // matches in the old route history. Puts all pages in between these two
+    // pages and all routes in between the corresponding old routes into
+    // transition delegate to resolve the conflict.
+    final List<Route<dynamic>> enteringPageRoutes = <Route<dynamic>>[];
+    final List<Route<dynamic>> exitingPageRoutes = <Route<dynamic>>[];
+    while (newPagesTop <= newPagesBottom) {
+      final Page<dynamic> nextPage = widget.pages[newPagesTop];
+      newPagesTop += 1;
+      if (nextPage.key == null || !pageKeyToOldRoute.containsKey(nextPage.key)) {
+        // There is no matching key in the old history, we need to create a new
+        // route and wait for the transition delegate to decide how to add
+        // it into the history.
+        final _RouteEntry newEntry = _RouteEntry(
+          nextPage.createRoute(context),
+          initialState: _RouteLifecycle.idle,
+        );
+        enteringPageRoutes.add(newEntry.route);
+        continue;
+      }
+      // There is a matching key! We should have gathered all new routes that
+      // need to be resolved, we still need to gather the old routes that need
+      // to be removed within this interval.
+      while (oldEntriesTop <= oldEntriesBottom) {
+        final _RouteEntry potentialEntryToRemove = _history[oldEntriesTop];
+        oldEntriesTop += 1;
+        // All pageless routes have been recorded in pageRouteToPagelessRoutes.
+        if (!potentialEntryToRemove.hasPage)
+          continue;
+
+        final Page<dynamic> potentialPageToRemove =
+          potentialEntryToRemove.route.settings as Page<dynamic>;
+        if (
+          potentialPageToRemove.key == null ||
+          !pageKeyToNewPage.containsKey(potentialPageToRemove.key)
+        ) {
+          // This route does not have a match in the new pages list and should
+          // be removed.
+          exitingPageRoutes.add(potentialEntryToRemove.route);
+        }
+      }
+      if (enteringPageRoutes.isNotEmpty || exitingPageRoutes.isNotEmpty) {
+        final Iterable<_RouteEntry> results = widget.transitionDelegate
+          ._transition(
+          enteringPageRoutes: enteringPageRoutes,
+          exitingPageRoutes: exitingPageRoutes,
+          precedingRoutes: newHistoryTop.map((_RouteEntry entry) => entry.route)
+            .toList(),
+          succeedingRoutes: _history.sublist(oldEntriesTop).map((
+            _RouteEntry entry) => entry.route).toList(),
+          pageRouteToPagelessRoutes: pageRouteToPagelessRoutes,
+        );
+        newHistoryTop.addAll(results);
+        enteringPageRoutes.clear();
+        exitingPageRoutes.clear();
+      }
+      // The transition delegate has resolved the conflict, we can finally update
+      // the page with the matching key.
+      final _RouteEntry matchingEntry = pageKeyToOldRoute[nextPage.key];
+      assert(matchingEntry.canUpdateFrom(nextPage));
+      matchingEntry.route._updateSettings(nextPage);
+      newHistoryTop.add(matchingEntry);
+    }
+
+    // There might be leftover from the previous loop.
+    if (enteringPageRoutes.isNotEmpty || exitingPageRoutes.isNotEmpty) {
+      final Iterable<_RouteEntry> results = widget.transitionDelegate
+        ._transition(
+        enteringPageRoutes: enteringPageRoutes,
+        exitingPageRoutes: exitingPageRoutes,
+        precedingRoutes: newHistoryTop.map((_RouteEntry entry) => entry.route)
+          .toList(),
+        succeedingRoutes: _history.sublist(oldEntriesTop).map((
+          _RouteEntry entry) => entry.route).toList(),
+        pageRouteToPagelessRoutes: pageRouteToPagelessRoutes,
+      );
+      newHistoryTop.addAll(results);
+    }
 
     // We've scanned the whole list.
     assert(oldEntriesTop == oldEntriesBottom + 1);
     assert(newPagesTop == newPagesBottom + 1);
     newPagesBottom = widget.pages.length - 1;
     oldEntriesBottom = _history.length - 1;
-    // Verifies we either reach the end or the oldEntriesTop must be updatable
+    // Verifies we either reach the bottom or the oldEntriesTop must be updatable
     // by newPagesTop.
     assert(() {
       if (oldEntriesTop <= oldEntriesBottom)
@@ -2270,6 +2532,7 @@ class NavigatorState extends State<Navigator> with TickerProviderStateMixin {
       }
       final Page<dynamic> newPage = widget.pages[newPagesTop];
       assert(oldEntry.canUpdateFrom(newPage));
+      oldEntry.route._updateSettings(newPage);
       oldEntriesTop += 1;
       newPagesTop += 1;
     }
@@ -2277,110 +2540,9 @@ class NavigatorState extends State<Navigator> with TickerProviderStateMixin {
     assert(() {
       _debugUpdatingPage = false;
     }());
+    assert(() { _debugLocked = true; return true; }());
     _flushHistoryUpdates();
-  }
-
-  void _updatePages() {
-    int oldIndex = 0;
-    int newIndex = 0;
-    final List<_RouteEntry> newHistory = <_RouteEntry>[];
-    final List<_SkippedRouteEntry> skippedEntries = <_SkippedRouteEntry>[];
-    loop: while (true) {
-      final _RouteEntry entry = _history[oldIndex];
-      // Is the next entry we have yet to look at a page-less route associated with the last paged route?
-      if (entry != null && !entry.hasPage) {
-        // It is! Copy it into the new history verbatim.
-        // Routes without pages at the very start of the history are always kept around.
-        newHistory.add(entry);
-        oldIndex += 1;
-        continue loop;
-      }
-      assert(entry == null || entry.hasPage);
-      // Have we reached the end of the new pages list?
-      if (widget.pages.length <= newIndex) {
-        break loop; // This is the loop's only exit point.
-      }
-      final Page<dynamic> page = widget.pages[newIndex];
-      assert(page != null);
-      // Does this page match a route we skipped earlier in this process?
-      for (_SkippedRouteEntry oldEntry in skippedEntries) {
-        if (oldEntry.entry.canUpdateFrom(page)) {
-          // It does! Copy that route into the new history (with all its subsidiary entries).
-          skippedEntries.remove(oldEntry);
-          newHistory.add(oldEntry.entry);
-          oldEntry.entry.route._updateSettings(page);
-          newHistory.addAll(oldEntry.subsidiaryEntries);
-          newIndex += 1;
-          continue loop;
-        }
-      }
-      assert(!skippedEntries.any((_SkippedRouteEntry oldEntry) => oldEntry.entry.canUpdateFrom(page)));
-      // Have we run out of old route entries to examine?
-      if (entry == null) {
-        // We have. Create a new route from this page.
-        final Route<dynamic> newRoute = page.createRoute(context);
-        assert(newRoute.settings == page);
-        final _RouteEntry newEntry = _RouteEntry(
-          newRoute,
-          initialState: _RouteLifecycle.add,
-        );
-        newHistory.add(newEntry);
-        continue loop;
-      }
-      assert(entry != null);
-      // We still have old route entries to examine.
-      // Does this page match the next entry we have yet to look at in the old history?
-      if (entry.canUpdateFrom(page)) {
-        // It does! Copy that route into the new history.
-        newHistory.add(entry);
-        entry.route._updateSettings(page);
-        oldIndex += 1;
-        newIndex += 1;
-        continue loop;
-      }
-      assert(!entry.canUpdateFrom(page));
-      // If we reach here, we have a page that does not match the next entry in
-      // the old history. We have to bring that old route, and any of its
-      // associated page-less routes, into the skippedEntries list, then try
-      // again.
-      final _SkippedRouteEntry skippedEntry = _SkippedRouteEntry(entry: entry, savePoint: newHistory.last);
-      skippedEntries.add(skippedEntry);
-      oldIndex += 1;
-      while (oldIndex < _history.length && !_history[oldIndex].hasPage) {
-        skippedEntry.subsidiaryEntries.add(_history[oldIndex]);
-        oldIndex += 1;
-      }
-    } // loop
-    // We reach here when the loop above hits the "break loop" line.
-    assert(newIndex >= widget.pages.length);
-    assert(oldIndex >= _history.length || _history[oldIndex].hasPage);
-    // Deal with the popped entries (those that were on the end of the history but are now missing).
-    for (int index = _history.length - 1; index >= oldIndex; index -= 1) {
-      final _RouteEntry entry = _history[index];
-      entry.pop<Null>(null);
-      newHistory.add(entry);
-    }
-    // Deal with the skipped entries.
-    final Map<_RouteEntry, List<_RouteEntry>> skippedEntriesBySavePoint = <_RouteEntry, List<_RouteEntry>>{};
-    for (_SkippedRouteEntry skippedEntry in skippedEntries) {
-      skippedEntry.remove();
-      skippedEntriesBySavePoint.putIfAbsent(skippedEntry.savePoint, () => <_RouteEntry>[])
-        ..add(skippedEntry.entry)
-        ..addAll(skippedEntry.subsidiaryEntries);
-    }
-    // Now merge the new history with the doomed routes.
-    _history.clear();
-    if (skippedEntriesBySavePoint.containsKey(null)) {
-      // Add entries we skipped at the very start of the list first.
-      _history.addAll(skippedEntriesBySavePoint[null]);
-    }
-    for (_RouteEntry entry in newHistory) {
-      // Add each entry in the new list followed by any skipped entries that were associated with it.
-      _history.add(entry);
-      final List<_RouteEntry> skippedEntries = skippedEntriesBySavePoint[entry];
-      if (skippedEntries != null)
-        _history.addAll(skippedEntries);
-    }
+    assert(() { _debugLocked = false; return true; }());
   }
 
   void _flushHistoryUpdates({bool rearrangeOverlay = true}) {
