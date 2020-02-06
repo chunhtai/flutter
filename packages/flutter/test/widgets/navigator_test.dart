@@ -1650,6 +1650,210 @@ void main() {
     expect(find.text('Route: root'), findsOneWidget);
     expect(find.text('Route: 4', skipOffstage: false), findsNothing);
   });
+
+  group('Page api', (){
+    Widget buildNavigator(
+      List<Page<dynamic>> pages,
+      OnPopPageCallback onPopPage, [
+      GlobalKey<NavigatorState> key
+    ]) {
+      return MediaQuery(
+        data: MediaQueryData.fromWindow(WidgetsBinding.instance.window),
+        child: Localizations(
+          locale: const Locale('en', 'US'),
+          delegates: [
+            DefaultMaterialLocalizations.delegate,
+            DefaultWidgetsLocalizations.delegate
+          ],
+          child: Directionality(
+            textDirection: TextDirection.ltr,
+            child: Navigator(
+              key: key,
+              pages: pages,
+              onPopPage: onPopPage,
+            ),
+          ),
+        ),
+      );
+    }
+
+    testWidgets('can initialize with pages list', (WidgetTester tester) async {
+      final GlobalKey<NavigatorState> navigator = GlobalKey<NavigatorState>();
+      final List<TestPage> myPages = <TestPage>[
+        const TestPage(key: ValueKey<String>('1'), name:'initial'),
+        const TestPage(key: ValueKey<String>('2'), name:'second'),
+        const TestPage(key: ValueKey<String>('3'), name:'third'),
+      ];
+
+      bool onPopPage(Route<dynamic> route, dynamic result) {
+        myPages.removeWhere((Page<dynamic> page) => route.settings == page);
+        return route.didPop(result);
+      }
+
+      await tester.pumpWidget(
+        buildNavigator(
+          myPages,
+          onPopPage,
+          navigator
+        )
+      );
+      // Waits for the pushing animation to finishes.
+      await tester.pumpAndSettle();
+      expect(find.text('third'), findsOneWidget);
+      expect(find.text('second'), findsNothing);
+      expect(find.text('initial'), findsNothing);
+
+      navigator.currentState.pop();
+      await tester.pumpAndSettle();
+      expect(find.text('third'), findsNothing);
+      expect(find.text('second'), findsOneWidget);
+      expect(find.text('initial'), findsNothing);
+
+      navigator.currentState.pop();
+      await tester.pumpAndSettle();
+      expect(find.text('third'), findsNothing);
+      expect(find.text('second'), findsNothing);
+      expect(find.text('initial'), findsOneWidget);
+    });
+
+    testWidgets('can modify routes history and secondary animation still works', (WidgetTester tester) async {
+      final GlobalKey<NavigatorState> navigator = GlobalKey<NavigatorState>();
+      Animation<double> secondaryAnimationOfRouteOne;
+      Animation<double> primaryAnimationOfRouteOne;
+      Animation<double> secondaryAnimationOfRouteTwo;
+      Animation<double> primaryAnimationOfRouteTwo;
+      Animation<double> secondaryAnimationOfRouteThree;
+      Animation<double> primaryAnimationOfRouteThree;
+      List<Page<dynamic>> myPages = <PageBuilder<void>>[
+        PageBuilder<void>(
+          key: const ValueKey<String>('1'),
+          name:'initial',
+          routeBuilder: (BuildContext context, RouteSettings settings) {
+            return PageRouteBuilder<void>(
+              settings: settings,
+              pageBuilder: (_, Animation<double> animation, Animation<double> secondaryAnimation) {
+                  secondaryAnimationOfRouteOne = secondaryAnimation;
+                  primaryAnimationOfRouteOne = animation;
+                return const Text('initial');
+              },
+            );
+          },
+        ),
+        PageBuilder<void>(
+          key: const ValueKey<String>('2'),
+          name:'second',
+          routeBuilder: (BuildContext context, RouteSettings settings) {
+            return PageRouteBuilder<void>(
+              settings: settings,
+              pageBuilder: (_, Animation<double> animation, Animation<double> secondaryAnimation) {
+                secondaryAnimationOfRouteTwo = secondaryAnimation;
+                primaryAnimationOfRouteTwo = animation;
+                return const Text('second');
+              },
+            );
+          },
+        ),
+        PageBuilder<void>(
+          key: const ValueKey<String>('3'),
+          name:'third',
+          routeBuilder: (BuildContext context, RouteSettings settings) {
+            return PageRouteBuilder<void>(
+              settings: settings,
+              pageBuilder: (_, Animation<double> animation, Animation<double> secondaryAnimation) {
+                secondaryAnimationOfRouteThree = secondaryAnimation;
+                primaryAnimationOfRouteThree = animation;
+                return const Text('third');
+              },
+            );
+          },
+        ),
+      ];
+      bool onPopPage(Route<dynamic> route, dynamic result) {
+        myPages.removeWhere((Page<dynamic> page) => route.settings == page);
+        return route.didPop(result);
+      }
+      await tester.pumpWidget(buildNavigator(myPages, onPopPage, navigator));
+      // The top most route is about to animate in while all routes underneath
+      // are waiting for the top most route finishes.
+      expect(secondaryAnimationOfRouteOne.value, primaryAnimationOfRouteTwo.value);
+      expect(primaryAnimationOfRouteOne.status, AnimationStatus.dismissed);
+      expect(secondaryAnimationOfRouteTwo.value, primaryAnimationOfRouteThree.value);
+      expect(primaryAnimationOfRouteTwo.status, AnimationStatus.dismissed);
+      expect(secondaryAnimationOfRouteThree.status, AnimationStatus.dismissed);
+      expect(primaryAnimationOfRouteThree.value, 0.0);
+      // Waits for the pushing animation to finishes.
+      await tester.pumpAndSettle();
+      expect(find.text('third'), findsOneWidget);
+      expect(find.text('second'), findsNothing);
+      expect(find.text('initial'), findsNothing);
+      expect(secondaryAnimationOfRouteOne.value, primaryAnimationOfRouteTwo.value);
+      expect(primaryAnimationOfRouteOne.status, AnimationStatus.completed);
+      expect(secondaryAnimationOfRouteTwo.value, primaryAnimationOfRouteThree.value);
+      expect(primaryAnimationOfRouteTwo.status, AnimationStatus.completed);
+      expect(secondaryAnimationOfRouteThree.status, AnimationStatus.dismissed);
+      expect(primaryAnimationOfRouteThree.status, AnimationStatus.completed);
+
+      myPages = myPages.reversed.toList();
+      await tester.pumpWidget(buildNavigator(myPages, onPopPage, navigator));
+      // Reversed routes are still chained up correctly.
+      expect(secondaryAnimationOfRouteThree.value, primaryAnimationOfRouteTwo.value);
+      expect(primaryAnimationOfRouteThree.status, AnimationStatus.completed);
+      expect(secondaryAnimationOfRouteTwo.value, primaryAnimationOfRouteOne.value);
+      expect(primaryAnimationOfRouteTwo.status, AnimationStatus.completed);
+      expect(secondaryAnimationOfRouteOne.status, AnimationStatus.dismissed);
+      expect(primaryAnimationOfRouteOne.status, AnimationStatus.completed);
+
+      navigator.currentState.pop();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 30));
+      expect(secondaryAnimationOfRouteThree.value, primaryAnimationOfRouteTwo.value);
+      expect(primaryAnimationOfRouteThree.status, AnimationStatus.completed);
+      expect(secondaryAnimationOfRouteTwo.value, primaryAnimationOfRouteOne.value);
+      expect(primaryAnimationOfRouteTwo.status, AnimationStatus.completed);
+      expect(secondaryAnimationOfRouteOne.status, AnimationStatus.dismissed);
+      expect(primaryAnimationOfRouteOne.value, 0.9);
+      await tester.pumpAndSettle();
+      expect(secondaryAnimationOfRouteThree.value, primaryAnimationOfRouteTwo.value);
+      expect(primaryAnimationOfRouteThree.status, AnimationStatus.completed);
+      expect(secondaryAnimationOfRouteTwo.value, primaryAnimationOfRouteOne.value);
+      expect(primaryAnimationOfRouteTwo.status, AnimationStatus.completed);
+      expect(secondaryAnimationOfRouteOne.status, AnimationStatus.dismissed);
+      expect(primaryAnimationOfRouteOne.status, AnimationStatus.dismissed);
+
+      navigator.currentState.pop();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 30));
+      expect(secondaryAnimationOfRouteThree.value, primaryAnimationOfRouteTwo.value);
+      expect(primaryAnimationOfRouteThree.status, AnimationStatus.completed);
+      expect(secondaryAnimationOfRouteTwo.value, primaryAnimationOfRouteOne.value);
+      expect(primaryAnimationOfRouteTwo.value, 0.9);
+      expect(secondaryAnimationOfRouteOne.status, AnimationStatus.dismissed);
+      expect(primaryAnimationOfRouteOne.status, AnimationStatus.dismissed);
+      await tester.pumpAndSettle();
+      expect(secondaryAnimationOfRouteThree.value, primaryAnimationOfRouteTwo.value);
+      expect(primaryAnimationOfRouteThree.status, AnimationStatus.completed);
+      expect(secondaryAnimationOfRouteTwo.value, primaryAnimationOfRouteOne.value);
+      expect(primaryAnimationOfRouteTwo.status, AnimationStatus.dismissed);
+      expect(secondaryAnimationOfRouteOne.status, AnimationStatus.dismissed);
+      expect(primaryAnimationOfRouteOne.status, AnimationStatus.dismissed);
+    });
+  });
+}
+
+class TestPage extends Page<void> {
+  const TestPage({
+    LocalKey key,
+    String name,
+    Object arguments,
+  }) : super(key: key, name: name, arguments: arguments);
+
+  @override
+  Route<void> createRoute(BuildContext context) {
+    return MaterialPageRoute<void>(
+      builder: (BuildContext context) => Text(name),
+      settings: this,
+    );
+  }
 }
 
 class NoAnimationPageRoute extends PageRouteBuilder<void> {
