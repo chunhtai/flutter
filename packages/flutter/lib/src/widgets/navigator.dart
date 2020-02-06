@@ -660,7 +660,7 @@ abstract class TransitionDelegate<T> {
     route._entry.remove();
   }
 
-  Iterable<_RouteEntry> _transition({
+  Iterable<Route<T>> _transition({
     List<Route<T>> enteringPageRoutes,
     List<Route<T>> exitingPageRoutes,
     List<Route<T>> precedingRoutes,
@@ -737,7 +737,7 @@ abstract class TransitionDelegate<T> {
       return true;
     }());
 
-    return results.map((Route<T> route) => route._entry);
+    return results;
   }
 
   /// Resolves conflicts
@@ -752,8 +752,8 @@ abstract class TransitionDelegate<T> {
 
 /// The default delegate class to customize page transition sequence of a navigator.
 class DefaultTransitionDelegate<T> extends TransitionDelegate<T> {
-  /// Creates a default delegate.
-  const DefaultTransitionDelegate(): super();
+  /// Creates a transition delegate
+  const DefaultTransitionDelegate() : super();
 
   @override
   Iterable<Route<T>> resolve({
@@ -2068,20 +2068,24 @@ class Navigator extends StatefulWidget {
 //   route entry will exit that state.
 // # These states await futures or other events, then transition automatically.
 enum _RouteLifecycle {
-  // routes that are and will be present:
-  add, // we'll want to run install, didAdd, etc; a route created by onGenerateInitialRoutes or by the initial widget.pages
-  adding, // we'll want to run install, didAdd, etc; a route created by onGenerateInitialRoutes or by the initial widget.pages
+  // routes that are present:
   push, // we'll want to run install, didPush, etc; a route added via push() and friends
   pushReplace, // we'll want to run install, didPush, etc; a route added via pushReplace() and friends
   pushing, // we're waiting for the future from didPush to complete
   replace, // we'll want to run install, didReplace, etc; a route added via replace() and friends
   idle, // route is being harmless
-  // routes that are but will not present:
+  // routes that are not present to the users, but the navigator state still consider they are present.
   pop, // we'll want to call didPop
   remove, // we'll want to run didReplace/didRemove etc
-  // routes that are considered as not present but their overlay entries are still in overlay due to transition.
+  // routes that are not present to the users and navigator's state also consider it not present
+  // but their overlay entries are still in overlay due to transition.
   popping, // we're waiting for the route to call finalizeRoute to switch to dispose
   removing, // we are waiting for subsequent routes to be done animating, then will switch to dispose
+  // routes that are not present to the users and navigator's state also consider it not present.
+  // Their overlay entries are still overlay; however, they are not suitable for transition.
+  add, // we'll want to run install, didAdd, etc; a route created by onGenerateInitialRoutes or by the initial widget.pages
+  adding, // we'll want to run install, didAdd, etc; a route created by onGenerateInitialRoutes or by the initial widget.pages
+  // routes that are completed removed from the navigator and overlay.
   dispose, // we will dispose the route momentarily
   disposed, // we have disposed the route
 }
@@ -2263,6 +2267,7 @@ class _RouteEntry {
 
   bool get willBePresent => currentState.index <= _RouteLifecycle.idle.index;
   bool get isPresent => currentState.index <= _RouteLifecycle.remove.index;
+  bool get canTransition => currentState.index <= _RouteLifecycle.removing.index;
 
   bool shouldAnnounceChangeToNext(Route<dynamic> nextRoute) {
     assert(nextRoute != lastAnnouncedNextRoute);
@@ -2305,18 +2310,25 @@ class NavigatorState extends State<Navigator> with TickerProviderStateMixin {
       observer._navigator = this;
     }
     if (widget.pages.isNotEmpty) {
-      _updatePages();
-      return;
-    }
-
-    _history.addAll(
-      widget.onGenerateInitialRoutes(this, widget.initialRoute ?? Navigator.defaultRouteName)
-        .map((Route<dynamic> route) => _RouteEntry(
-          route,
+      _history.addAll(
+        widget.pages.map((Page<dynamic> page) => _RouteEntry(
+          page.createRoute(context),
           initialState: _RouteLifecycle.add,
+        ))
+      );
+    } else {
+      _history.addAll(
+        widget.onGenerateInitialRoutes(
+          this,
+          widget.initialRoute ?? Navigator.defaultRouteName
+        ).map((Route<dynamic> route) =>
+          _RouteEntry(
+            route,
+            initialState: _RouteLifecycle.add,
+          ),
         ),
-      ),
-    );
+      );
+    }
     assert(!_debugLocked);
     assert(() { _debugLocked = true; return true; }());
     _flushHistoryUpdates();
@@ -2442,12 +2454,12 @@ class NavigatorState extends State<Navigator> with TickerProviderStateMixin {
     // Reverts the pageless routes that cannot be updated.
     oldEntriesBottom += pagelessRoutesToSkip;
 
-    // Scans middle of the old list.
     int oldEntriesTopToScan = oldEntriesTop;
     final Map<LocalKey, _RouteEntry> pageKeyToOldRoute = <LocalKey, _RouteEntry>{};
     final Map<Route<dynamic>, List<Route<dynamic>>> pageRouteToPagelessRoutes =
       <Route<dynamic>, List<Route<dynamic>>>{};
     Route<dynamic> previousPageRoute;
+    // Scans middle of the old list.
     while (oldEntriesTopToScan <= oldEntriesBottom) {
       final _RouteEntry oldEntry = _history[oldEntriesTopToScan];
       oldEntriesTopToScan += 1;
@@ -2493,13 +2505,27 @@ class NavigatorState extends State<Navigator> with TickerProviderStateMixin {
     // matches in the old route history. Puts all pages in between these two
     // pages and all routes in between the corresponding old routes into
     // transition delegate to resolve the conflict.
+    void addPageRoute(Route<dynamic> pageRoute) {
+      newHistoryTop.add(pageRoute._entry);
+      if (pageRouteToPagelessRoutes.containsKey(pageRoute)) {
+        newHistoryTop.addAll(
+          pageRouteToPagelessRoutes[pageRoute].map(
+              (Route<dynamic> pagelessRoute) => pagelessRoute._entry
+          )
+        );
+      }
+    }
     final List<Route<dynamic>> enteringPageRoutes = <Route<dynamic>>[];
     final List<Route<dynamic>> exitingPageRoutes = <Route<dynamic>>[];
     final Set<LocalKey> visitedOldPageKey = <LocalKey>{};
     while (newPagesTop <= newPagesBottom) {
       final Page<dynamic> nextPage = widget.pages[newPagesTop];
       newPagesTop += 1;
-      if (nextPage.key == null || !pageKeyToOldRoute.containsKey(nextPage.key)) {
+      if (
+        nextPage.key == null ||
+        !pageKeyToOldRoute.containsKey(nextPage.key) ||
+        !pageKeyToOldRoute[nextPage.key].canUpdateFrom(nextPage)
+      ) {
         // There is no matching key in the old history, we need to create a new
         // route and wait for the transition delegate to decide how to add
         // it into the history.
@@ -2535,7 +2561,10 @@ class NavigatorState extends State<Navigator> with TickerProviderStateMixin {
 
           if (potentialPageToRemove.key != null) {
             visitedOldPageKey.add(potentialPageToRemove.key);
-            if (!pageKeyToNewPage.containsKey(potentialPageToRemove.key))
+            if (
+              !pageKeyToNewPage.containsKey(potentialPageToRemove.key) ||
+              !potentialEntryToRemove.canUpdateFrom(pageKeyToNewPage[potentialPageToRemove.key])
+            )
               exitingPageRoutes.add(potentialEntryToRemove.route);
           } else {
             exitingPageRoutes.add(potentialEntryToRemove.route);
@@ -2549,17 +2578,17 @@ class NavigatorState extends State<Navigator> with TickerProviderStateMixin {
         }
       }
       if (enteringPageRoutes.isNotEmpty || exitingPageRoutes.isNotEmpty) {
-        final Iterable<_RouteEntry> results = widget.transitionDelegate
+        final Iterable<Route<dynamic>> results = widget.transitionDelegate
           ._transition(
-          enteringPageRoutes: enteringPageRoutes,
-          exitingPageRoutes: exitingPageRoutes,
-          precedingRoutes: newHistoryTop.map((_RouteEntry entry) => entry.route)
-            .toList(),
-          succeedingRoutes: _history.sublist(oldEntriesTop).map((
-            _RouteEntry entry) => entry.route).toList(),
-          pageRouteToPagelessRoutes: pageRouteToPagelessRoutes,
-        );
-        newHistoryTop.addAll(results);
+            enteringPageRoutes: enteringPageRoutes,
+            exitingPageRoutes: exitingPageRoutes,
+            precedingRoutes: newHistoryTop.map((_RouteEntry entry) => entry.route)
+              .toList(),
+            succeedingRoutes: _history.sublist(oldEntriesTop).map((
+              _RouteEntry entry) => entry.route).toList(),
+            pageRouteToPagelessRoutes: pageRouteToPagelessRoutes,
+          );
+        results.forEach(addPageRoute);
         enteringPageRoutes.clear();
         exitingPageRoutes.clear();
       }
@@ -2568,7 +2597,7 @@ class NavigatorState extends State<Navigator> with TickerProviderStateMixin {
       final _RouteEntry matchingEntry = pageKeyToOldRoute[nextPage.key];
       assert(matchingEntry.canUpdateFrom(nextPage));
       matchingEntry.route._updateSettings(nextPage);
-      newHistoryTop.add(matchingEntry);
+      addPageRoute(matchingEntry.route);
     }
 
     // Any remaining old routes that does not have a match will need to be
@@ -2591,7 +2620,7 @@ class NavigatorState extends State<Navigator> with TickerProviderStateMixin {
     }
 
     if (enteringPageRoutes.isNotEmpty || exitingPageRoutes.isNotEmpty) {
-      final Iterable<_RouteEntry> results = widget.transitionDelegate
+      final Iterable<Route<dynamic>> results = widget.transitionDelegate
         ._transition(
         enteringPageRoutes: enteringPageRoutes,
         exitingPageRoutes: exitingPageRoutes,
@@ -2601,7 +2630,7 @@ class NavigatorState extends State<Navigator> with TickerProviderStateMixin {
           _RouteEntry entry) => entry.route).toList(),
         pageRouteToPagelessRoutes: pageRouteToPagelessRoutes,
       );
-      newHistoryTop.addAll(results);
+      results.forEach(addPageRoute);
     }
 
     // We've scanned the whole list.
@@ -2759,7 +2788,6 @@ class NavigatorState extends State<Navigator> with TickerProviderStateMixin {
     }
     // Now that the list is clean, send the didChangeNext/didChangePrevious
     // notifications.
-    print(_history.map((r)=> '${r.route.settings.name}, ${r.currentState}'));
     _flushRouteAnnouncement();
 
     // Lastly, removes the overlay entries of all marked entries and disposes
@@ -2777,6 +2805,10 @@ class NavigatorState extends State<Navigator> with TickerProviderStateMixin {
     int index = _history.length - 1;
     while (index >= 0) {
       final _RouteEntry entry = _history[index];
+      if (!entry.canTransition) {
+        index -= 1;
+        continue;
+      }
       final _RouteEntry next = _getRouteAfter(index + 1, _RouteEntry.isPresentPredicate);
 
       if (next?.route != entry.lastAnnouncedNextRoute) {
