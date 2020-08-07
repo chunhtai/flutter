@@ -73,7 +73,7 @@ class SystemChannels {
   ///  * `SystemSound.play`: Triggers a system audio effect. The argument must
   ///    be a [String] describing the desired effect; currently only `click` is
   ///    supported. See [SystemSound.play].
-  ///
+  ///chmarks/test_apps/stocks/lib/main.dart
   ///  * `SystemChrome.setPreferredOrientations`: Informs the operating system
   ///    of the desired orientation of the display. The argument is a [List] of
   ///    values which are string representations of values of the
