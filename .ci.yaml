@@ -942,6 +942,7 @@ targets:
 
   - name: animated_image_gc_perf
     builder: Linux animated_image_gc_perf
+    bringup: true
     presubmit: false
     scheduler: luci
 
