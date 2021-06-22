@@ -744,6 +744,7 @@ targets:
 
   - name: linux_analyzer_benchmark
     builder: Linux analyzer_benchmark
+    bringup: true
     presubmit: false
     scheduler: luci
 
