@@ -66,6 +66,7 @@ class BasicMessageChannel<T> {
   /// The handler's return value is sent back to the platform plugins as a
   /// message reply. It may be null.
   void setMessageHandler(Future<T> Function(T? message)? handler) {
+    // TODO(chunhtai): random stuff.
     if (handler == null) {
       binaryMessenger.setMessageHandler(name, null);
     } else {

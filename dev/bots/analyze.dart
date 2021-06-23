@@ -60,6 +60,9 @@ Future<void> run(List<String> arguments) async {
   print('$clock Deprecations...');
   await verifyDeprecations(flutterRoot);
 
+  print('$clock TODOs...');
+  await verifyTODOs(flutterRoot);
+
   print('$clock Licenses...');
   await verifyNoMissingLicense(flutterRoot);
 
@@ -231,6 +234,88 @@ Future<void> verifyDeprecations(String workingDirectory, { int minimumMatches = 
       '${bold}See: https://github.com/flutter/flutter/wiki/Tree-hygiene#handling-breaking-changes$reset',
     ]);
   }
+}
+
+final RegExp _findTODOPattern = RegExp(r'// *TODO:|TODO\((?<ldap>.+)\):');
+final RegExp _findGitHubIssueLink = RegExp(r'https://github\.com/[^ \n]+/issues/[0-9]+');
+final RegExp _commentPattern = RegExp(r'^ *\/\/');
+const String _currentFileName = 'dev/bots/analyze.dart';
+
+const List<String> _todoEnforceSubDirectories = <String>['dev'];
+
+Future<void> verifyTODOs(String workingDirectory, { int minimumMatches = 2000 }) async {
+  print('verify TODO working directory $workingDirectory');
+  final List<String> errors = <String>[];
+  for (final String subDirectory in _todoEnforceSubDirectories) {
+    final String fullPath = path.join(workingDirectory, subDirectory);
+    await for (final File file in _allFiles(fullPath, 'dart', minimumMatches: 0)) {
+      if (file.path.endsWith(_currentFileName)) {
+        continue;
+      }
+      int lineNumber = 0;
+      final List<String> lines = file.readAsLinesSync();
+      final List<int> linesWithDeprecations = <int>[];
+      for (final String line in lines) {
+        if (line.contains(_findTODOPattern)) {
+          linesWithDeprecations.add(lineNumber);
+        }
+        lineNumber += 1;
+      }
+      for (int lineNumber in linesWithDeprecations) {
+        try {
+          final RegExpMatch match1 = _findTODOPattern.firstMatch(
+              lines[lineNumber]);
+          if (match1.namedGroup('ldap') == null) {
+            throw 'No assignee for TODO.';
+          }
+          bool hasIssueLink = false;
+          int walker = lineNumber;
+          // Makes sure the continuous comment blocks has an issue number.
+          do {
+            if (_findGitHubIssueLink.hasMatch(lines[walker])) {
+              hasIssueLink = true;
+              break;
+            }
+            walker += 1;
+          } while (walker < lines.length &&
+              _commentPattern.hasMatch(lines[lineNumber]) &&
+              lines[walker]
+                  .replaceFirst(_commentPattern, '')
+                  .trim()
+                  .isNotEmpty);
+          if (!hasIssueLink) {
+            throw match1.namedGroup('ldap');
+          }
+        } catch (error) {
+          errors.add('${file.path}:${lineNumber + 1}, $error');
+        }
+      }
+    }
+  }
+  final Map<String, List<String>> nameToURL = <String, List<String>>{};
+  for (final String error in errors) {
+    var iter = error.split(', ');
+    var iter2 = iter[0].split(':');
+    String filename = iter2[0].replaceFirst('/Users/chtai/git/flutter', 'https://github.com/flutter/flutter/blob/master/') + '#L' + iter2[1];
+    if (!nameToURL.containsKey(iter[1])) {
+      nameToURL[iter[1]] = <String>[];
+    }
+    nameToURL[iter[1]].add(filename);
+  }
+  for (String name in nameToURL.keys) {
+    print('@$name:');
+    for (String file in nameToURL[name]) {
+      print('  $file');
+    }
+    print('\n\n');
+  }
+  // Fail if any errors
+  // if (errors.isNotEmpty) {
+  //   exitWithError(<String>[
+  //     ...errors,
+  //     '${bold}See: https://dart-lang.github.io/linter/lints/flutter_style_todos.html',
+  //   ]);
+  // }
 }
 
 String _generateLicense(String prefix) {
