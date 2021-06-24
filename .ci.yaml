@@ -736,6 +736,7 @@ targets:
 
   - name: win_web_tool_tests
     builder: Windows web_tool_tests
+    bringup: true
     scheduler: luci
     runIf:
       - dev/**
