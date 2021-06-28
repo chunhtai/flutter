@@ -736,6 +736,7 @@ targets:
 
   - name: win_web_tool_tests
     builder: Windows web_tool_tests
+    bringup: true // Flaky https://github.com/chunhtai/flutter/issues/80
     scheduler: luci
     runIf:
       - dev/**
