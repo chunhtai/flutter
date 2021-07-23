@@ -1976,7 +1976,6 @@ targets:
 
   - name: Mac_ios native_ui_tests_ios32
     builder: Mac_ios native_ui_tests_ios32
-    bringup: true
     presubmit: false
     properties:
       tags: >
