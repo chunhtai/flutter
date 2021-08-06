@@ -1034,6 +1034,7 @@ targets:
     scheduler: luci
 
   - name: Linux android_stack_size_test
+    bringup: true # Flaky https://github.com/chunhtai/flutter/issues/165
     builder: Linux android_stack_size_test
     presubmit: false
     properties:
