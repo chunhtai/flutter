@@ -1220,6 +1220,7 @@ targets:
     scheduler: luci
 
   - name: Linux flutter_gallery__transition_perf_with_semantics
+    bringup: true # Flaky https://github.com/chunhtai/flutter/issues/182
     builder: Linux flutter_gallery__transition_perf_with_semantics
     presubmit: false
     properties:
