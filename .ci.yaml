@@ -1349,6 +1349,7 @@ targets:
     scheduler: luci
 
   - name: Linux new_gallery__crane_perf
+    bringup: true # Flaky https://github.com/chunhtai/flutter/issues/167
     builder: Linux new_gallery__crane_perf
     presubmit: false
     properties:
