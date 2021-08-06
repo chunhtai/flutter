@@ -1114,6 +1114,7 @@ targets:
     scheduler: luci
 
   - name: Linux cubic_bezier_perf__e2e_summary
+    bringup: true # Flaky https://github.com/chunhtai/flutter/issues/175
     builder: Linux cubic_bezier_perf__e2e_summary
     presubmit: false
     properties:
