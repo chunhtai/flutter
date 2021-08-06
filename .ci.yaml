@@ -1018,6 +1018,7 @@ targets:
     scheduler: luci
 
   - name: Linux android_defines_test
+    bringup: true # Flaky https://github.com/chunhtai/flutter/issues/163
     builder: Linux android_defines_test
     presubmit: false
     properties:
