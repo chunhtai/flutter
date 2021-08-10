@@ -264,7 +264,7 @@ Future<void> verifyTODOs(String workingDirectory, { int minimumMatches = 2000 })
       for (int lineNumber in linesWithDeprecations) {
         try {
           final RegExpMatch match1 = _findTODOPattern.firstMatch(
-              lines[lineNumber]);
+              lines[lineNumber])!;
           if (match1.namedGroup('ldap') == null) {
             throw 'No assignee for TODO.';
           }
@@ -284,7 +284,7 @@ Future<void> verifyTODOs(String workingDirectory, { int minimumMatches = 2000 })
                   .trim()
                   .isNotEmpty);
           if (!hasIssueLink) {
-            throw match1.namedGroup('ldap');
+            throw match1.namedGroup('ldap')!;
           }
         } catch (error) {
           errors.add('${file.path}:${lineNumber + 1}, $error');
@@ -300,11 +300,11 @@ Future<void> verifyTODOs(String workingDirectory, { int minimumMatches = 2000 })
     if (!nameToURL.containsKey(iter[1])) {
       nameToURL[iter[1]] = <String>[];
     }
-    nameToURL[iter[1]].add(filename);
+    nameToURL[iter[1]]!.add(filename);
   }
   for (String name in nameToURL.keys) {
     print('@$name:');
-    for (String file in nameToURL[name]) {
+    for (String file in nameToURL[name]!) {
       print('  $file');
     }
     print('\n\n');
