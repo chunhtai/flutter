@@ -45,7 +45,6 @@ class SelectionArea extends StatefulWidget {
 }
 
 class _SelectionAreaState extends State<SelectionArea> {
-  final GlobalKey<RawGestureDetectorState> _gestureDetectorKey = GlobalKey<RawGestureDetectorState>();
   final Map<Type, GestureRecognizerFactory> _gestureRecognizers = <Type, GestureRecognizerFactory>{};
   late final Map<Type, Action<Intent>> _actions = <Type, Action<Intent>>{
     _CopyIntent: CallbackAction<_CopyIntent>(onInvoke: _copy),
@@ -55,7 +54,8 @@ class _SelectionAreaState extends State<SelectionArea> {
   Offset? _start;
   Offset? _end;
 
-  RenderObject get _renderObject => context.findRenderObject()!;
+  final GlobalKey _renderSelectionKey = GlobalKey();
+  _RenderSelectionBoundary get _renderSelectionBoundary => _renderSelectionKey.currentContext!.findRenderObject()! as _RenderSelectionBoundary;
 
   @override
   void initState() {
@@ -99,21 +99,20 @@ class _SelectionAreaState extends State<SelectionArea> {
 
   void _updateSelection(Offset offset) {
     _end = offset;
-    final Matrix4 transform = _renderObject.getTransformTo(null);
-    transform.invert();
-    final Offset start = MatrixUtils.transformPoint(transform, _start!);
-    final Offset end = MatrixUtils.transformPoint(transform, _end!);
-    print('_updateSelection from $start, to $end');
-    Selectable.updateSelectionAt(_renderObject, start, end);
+    print('_updateSelection from $_start, to $_end');
+    for (final Selectable child in _renderSelectionBoundary.children) {
+      final Matrix4 transform = child.getTransformTo(null);
+      transform.invert();
+      child.updateSelection(MatrixUtils.transformPoint(transform, _start!), MatrixUtils.transformPoint(transform, _end!));
+    }
   }
 
   void _cancelSelection() {
     _start = null;
     _end = null;
-    Selectable.visitSelectables(_renderObject, (Selectable selectable) {
-      selectable.clear();
-      return false;
-    });
+    for (final Selectable child in _renderSelectionBoundary.children) {
+      child.clear();
+    }
   }
 
   void _selectAll(Intent intent) {
@@ -123,14 +122,16 @@ class _SelectionAreaState extends State<SelectionArea> {
   }
 
   Future<void> _copy(Intent intent) async {
-    Object? data;
-    Selectable.visitSelectables(_renderObject, (Selectable selectable) {
-      data = selectable.copy();
-      return false;
-    });
-    if (data == null)
+    final List<Object> segments = <Object>[];
+    for (final Selectable child in _renderSelectionBoundary.children) {
+      final Object? segment = child.copy();
+      if (segment != null) {
+        segments.add(segment);
+      }
+    }
+    if (segments.isEmpty)
       return;
-    Clipboard.setData(ClipboardData(text: data.toString()));
+    Clipboard.setData(ClipboardData(text: segments.join('')));
   }
 
   @override
@@ -143,16 +144,32 @@ class _SelectionAreaState extends State<SelectionArea> {
       child: Actions(
         actions: _actions,
         child: RawGestureDetector(
-          key: _gestureDetectorKey,
           gestures: _gestureRecognizers,
           behavior: HitTestBehavior.translucent,
           excludeFromSemantics: true,
-          child: widget.child,
+          child: _SelectionBoundaryWidget(
+            key: _renderSelectionKey,
+            child: widget.child,
+          ),
         ),
       ),
     );
   }
 }
+
+class _SelectionBoundaryWidget extends SingleChildRenderObjectWidget {
+  const _SelectionBoundaryWidget({
+    Key? key,
+    Widget? child,
+  }) : super(key: key, child: child);
+
+  @override
+  _RenderSelectionBoundary createRenderObject(BuildContext context) {
+    return _RenderSelectionBoundary();
+  }
+}
+
+class _RenderSelectionBoundary extends RenderProxyBox with SelectionBoundary { }
 
 class _SelectAllIntent extends Intent {
   const _SelectAllIntent();

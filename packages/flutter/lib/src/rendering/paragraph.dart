@@ -332,6 +332,9 @@ class RenderParagraph extends RenderBox
     return result;
   }
 
+  @override
+  void rebuildSelectable() { }
+
   SelectionResult _updateTextSelection(Offset start, Offset end) {
     if (!hasSize) {
       return SelectionResult.previous;

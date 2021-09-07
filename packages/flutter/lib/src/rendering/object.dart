@@ -852,6 +852,8 @@ class PipelineOwner {
 
   List<RenderObject> _nodesNeedingLayout = <RenderObject>[];
 
+  Set<SelectionBoundary> _selectionBoundariesNeedingUpdate = <SelectionBoundary>{};
+
   /// Whether this pipeline is currently in the layout phase.
   ///
   /// Specifically, whether [flushLayout] is currently running.
@@ -891,6 +893,31 @@ class PipelineOwner {
         _debugDoingLayout = false;
         return true;
       }());
+      if (!kReleaseMode) {
+        Timeline.finishSync();
+      }
+    }
+  }
+
+  /// Update the layout information for all dirty render objects.
+  ///
+  /// This function is one of the core stages of the rendering pipeline. Layout
+  /// information is cleaned prior to painting so that render objects will
+  /// appear on screen in their up-to-date locations.
+  ///
+  /// See [RendererBinding] for an example of how this function is used.
+  void flushSelectionBoundaries() {
+    if (!kReleaseMode) {
+      Timeline.startSync('selection', arguments: timelineArgumentsIndicatingLandmarkEvent);
+    }
+    try {
+      while (_selectionBoundariesNeedingUpdate.isNotEmpty) {
+        for (final SelectionBoundary boundary in _selectionBoundariesNeedingUpdate) {
+          boundary.rebuildSelectables();
+        }
+        _selectionBoundariesNeedingUpdate = <SelectionBoundary>{};
+      }
+    } finally {
       if (!kReleaseMode) {
         Timeline.finishSync();
       }
@@ -1115,8 +1142,25 @@ enum SelectionResult {
   none,
 }
 
+/// The boundary of a selection that can span multiple widget.
+mixin SelectionBoundary on RenderObject {
+  /// The immediate selectable children in the subtree.
+  List<Selectable> get children => _children;
+  late List<Selectable> _children;
+
+  /// walk the subtree and collect the selectables.
+  void rebuildSelectables() {
+    _children = <Selectable>[];
+    Selectable.visitSelectables(this, (Selectable selectable) {
+      _children.add(selectable);
+      selectable.rebuildSelectable();
+      return false;
+    });
+  }
+}
+
 /// Something that can be selected by the [SelectionArea] widget, normally a render object.
-abstract class Selectable  {
+mixin Selectable on RenderObject {
   /// Clear the selection from the [Selectable].
   void clear();
 
@@ -1128,6 +1172,8 @@ abstract class Selectable  {
   /// Returns true if this Selectable consume the selection edge.
   SelectionResult updateSelection(Offset start, Offset end);
 
+  void rebuildSelectable();
+
   /// Visit all the selectable under the root in the order of [visitChildrenForSelection]
   static void visitSelectables(RenderObject root, SelectableVisitor visitor) {
     bool _abort = false;
@@ -1136,7 +1182,7 @@ abstract class Selectable  {
         return;
 
       if (object is Selectable) {
-        if (visitor(object as Selectable)) {
+        if (visitor(object)) {
           _abort = true;
         }
         return;
@@ -1171,11 +1217,11 @@ abstract class Selectable  {
   /// Set selection at [root].
   static SelectionResult updateSelectionAt(RenderObject root, Offset start, Offset end) {
     if (root is Selectable) {
-      return (root as Selectable).updateSelection(start, end);
+      return root.updateSelection(start, end);
     }
     SelectionResult selectionResult = SelectionResult.none;
     visitSelectables(root, (Selectable selectable) {
-      final Matrix4 transform = (selectable as RenderObject).getTransformTo(root);
+      final Matrix4 transform = selectable.getTransformTo(root);
       transform.invert();
       selectionResult = selectable.updateSelection(
         MatrixUtils.transformPoint(transform, start),
@@ -1314,6 +1360,7 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
   /// Initializes internal fields for subclasses.
   RenderObject() {
     _needsCompositing = isRepaintBoundary || alwaysNeedsCompositing;
+    _selectionBoundary = this is SelectionBoundary ? this as SelectionBoundary : null;
   }
 
   /// Cause the entire subtree rooted at the given [RenderObject] to be marked
@@ -1425,6 +1472,10 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
     assert(_debugCanPerformMutations);
     assert(child != null);
     setupParentData(child);
+    _updateChildSelectionBoundary(child, _selectionBoundary);
+    if (child is Selectable) {
+      markNeedsSelectionUpdate();
+    }
     markNeedsLayout();
     markNeedsCompositingBitsUpdate();
     markNeedsSemanticsUpdate();
@@ -1444,6 +1495,9 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
     child.parentData!.detach();
     child.parentData = null;
     super.dropChild(child);
+    if (child is Selectable) {
+      markNeedsSelectionUpdate();
+    }
     markNeedsLayout();
     markNeedsCompositingBitsUpdate();
     markNeedsSemanticsUpdate();
@@ -1521,6 +1575,8 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
   bool? _debugCanParentUseSize;
 
   bool _debugMutationsLocked = false;
+
+  SelectionBoundary? _selectionBoundary;
 
   /// Whether tree mutations are currently permitted.
   ///
@@ -1728,6 +1784,14 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
     }
   }
 
+  /// Notifies the closet selection boundary that [Selectables]s in the subtree
+  /// have changed.
+  void markNeedsSelectionUpdate() {
+    if (_selectionBoundary != null) {
+      owner!._selectionBoundariesNeedingUpdate.add(_selectionBoundary!);
+    }
+  }
+
   /// Mark this render object's layout information as dirty, and then defer to
   /// the parent.
   ///
@@ -1773,6 +1837,20 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
   // Reduces closure allocation for visitChildren use cases.
   static void _cleanChildRelayoutBoundary(RenderObject child) {
     child._cleanRelayoutBoundary();
+  }
+
+  void _updateSelectionBoundary(SelectionBoundary? boundary) {
+    assert(this is! SelectionBoundary);
+    if (_selectionBoundary != boundary) {
+      _selectionBoundary = boundary;
+      visitChildren((RenderObject child) =>_updateChildSelectionBoundary(child, boundary));
+    }
+  }
+
+  // Reduces closure allocation for visitChildren use cases.
+  static void _updateChildSelectionBoundary(RenderObject child, SelectionBoundary? boundary) {
+    if (child is! SelectionBoundary)
+      child._updateSelectionBoundary(boundary);
   }
 
   /// Bootstrap the rendering pipeline by scheduling the very first layout.
@@ -3557,60 +3635,51 @@ mixin ContainerRenderObjectMixin<ChildType extends RenderObject, ParentDataType 
     return children;
   }
 
-  RenderBox? _currentSelectionChild;
+  late List<Selectable> _selectionChildren;
+  int _currentSelectionIndex = -1;
 
   @override
   void clear() {
-    Selectable.visitSelectables(this, (Selectable child) {
+    for (final Selectable child in _selectionChildren) {
       child.clear();
-      return false;
-    });
-    _currentSelectionChild = null;
+    }
+    _currentSelectionIndex = -1;
   }
 
   @override
   Object? copy() {
     final List<Object> selections = <Object>[];
-    Selectable.visitSelectables(this, (Selectable child) {
+    for (final Selectable child in _selectionChildren) {
       final Object? object = child.copy();
       if (object != null) {
         selections.add(object);
       }
-      return false;
-    });
+    }
     if (selections.isEmpty) {
       return null;
     }
-    return selections.join(' ');
+    return selections.join('');
+  }
+
+  @override
+  void rebuildSelectable() {
+    _selectionChildren = <Selectable>[];
+    Selectable.visitSelectables(this, (Selectable selectable) {
+      _selectionChildren.add(selectable);
+      selectable.rebuildSelectable();
+      return false;
+    });
   }
 
   @mustCallSuper
-  SelectionResult updateChildSelection(RenderBox child, Offset start, Offset end, SelectionResult onGoingResult) {
+  SelectionResult updateChildSelection(Selectable child, Offset start, Offset end, SelectionResult onGoingResult) {
     assert(onGoingResult != SelectionResult.end);
     final SelectionResult result = Selectable.updateSelectionAt(child,
       start,
       end,
     );
     print('updateChildSelection $this update $child, from $start, to $end, result is $result');
-    if (result != SelectionResult.previous && result != SelectionResult.none)
-      _currentSelectionChild = child;
     return result == SelectionResult.none ? onGoingResult : result;
-  }
-  List<RenderBox>? _cachedSelectionChildren;
-  List<RenderBox> get _selectionChildren {
-    if (_cachedSelectionChildren == null) {
-      _cachedSelectionChildren = <RenderBox>[];
-      visitChildrenForSelection((RenderObject child) {
-        _cachedSelectionChildren!.add(child as RenderBox);
-      });
-    }
-    return _cachedSelectionChildren!;
-  }
-
-  @override
-  void markNeedsLayout() {
-    _cachedSelectionChildren = null;
-    super.markNeedsLayout();
   }
 
   SelectionResult _initSelection(Offset start, Offset end) {
@@ -3618,11 +3687,13 @@ mixin ContainerRenderObjectMixin<ChildType extends RenderObject, ParentDataType 
     SelectionResult onGoingResult = SelectionResult.none;
     final bool forwardSelection = start.dy == end.dy ? start.dx <= end.dx : start.dy < end.dy;
     final SelectionResult continuingCondition = forwardSelection ? SelectionResult.next : SelectionResult.previous;
-    for (final RenderBox child in forwardSelection ? _selectionChildren : _selectionChildren.reversed) {
+    for (int i = 0; i < _selectionChildren.length; i += 1){
+      final int index = forwardSelection ? i : _selectionChildren.length - i - 1;
+      final Selectable child =  _selectionChildren[index];
       onGoingResult = _updateChildSelectionInParentCoodinate(child, start, end, onGoingResult);
       assert(
-        overallResult == SelectionResult.none || onGoingResult != SelectionResult.none,
-       'updateChildSelection must not returned SelectionResult.none if onGoingResult is not SelectionResult.none'
+      overallResult == SelectionResult.none || onGoingResult != SelectionResult.none,
+      'updateChildSelection must not returned SelectionResult.none if onGoingResult is not SelectionResult.none'
       );
       if (overallResult == SelectionResult.none) {
         overallResult = onGoingResult;
@@ -3632,11 +3703,14 @@ mixin ContainerRenderObjectMixin<ChildType extends RenderObject, ParentDataType 
       if (onGoingResult != continuingCondition && onGoingResult != SelectionResult.none) {
         break;
       }
+      if (onGoingResult != SelectionResult.none) {
+        _currentSelectionIndex = index;
+      }
     }
     return overallResult;
   }
 
-  SelectionResult _updateChildSelectionInParentCoodinate(RenderBox child, Offset start, Offset end, SelectionResult onGoingResult) {
+  SelectionResult _updateChildSelectionInParentCoodinate(Selectable child, Offset start, Offset end, SelectionResult onGoingResult) {
     final Matrix4 transform = child.getTransformTo(this);
     transform.invert();
     // print('apply transform for $child, from ($start to $end) to (${MatrixUtils.transformPoint(transform, start)} to  ${MatrixUtils.transformPoint(transform, end)})');
@@ -3650,12 +3724,10 @@ mixin ContainerRenderObjectMixin<ChildType extends RenderObject, ParentDataType 
   }
 
   SelectionResult _adjustSelection(Offset start, Offset end) {
-    // TODO(chunhtai): handle inverted selection.
-    int selectionIndex = _selectionChildren.indexOf(_currentSelectionChild!);
-    assert(selectionIndex != -1);
+    assert(_currentSelectionIndex != -1);
     print('adjust');
     final SelectionResult result = _updateChildSelectionInParentCoodinate(
-      _currentSelectionChild!,
+      _selectionChildren[_currentSelectionIndex],
       start,
       end,
       SelectionResult.none,
@@ -3669,29 +3741,34 @@ mixin ContainerRenderObjectMixin<ChildType extends RenderObject, ParentDataType 
         return result;
       case SelectionResult.next:
         {
+          int nextSelectionIndex = _currentSelectionIndex;
           SelectionResult nextResult = result;
-          selectionIndex += 1;
-          while(nextResult == SelectionResult.next && selectionIndex < _selectionChildren.length) {
-            print('adjust');
+          do {
+            _currentSelectionIndex = nextSelectionIndex;
+            nextSelectionIndex  = _currentSelectionIndex + 1;
             nextResult = _updateChildSelectionInParentCoodinate(
-              _selectionChildren[selectionIndex],
+              _selectionChildren[nextSelectionIndex],
               start,
               end,
               SelectionResult.next,
             );
-            selectionIndex += 1;
-          }
+          } while (nextResult == SelectionResult.next && nextSelectionIndex < _selectionChildren.length);
           return nextResult == SelectionResult.next ? SelectionResult.next : SelectionResult.end;
         }
       case SelectionResult.previous:
         {
+          int previousSelectionIndex = _currentSelectionIndex;
           SelectionResult previousResult = result;
-          selectionIndex -= 1;
-          while(previousResult == SelectionResult.previous && selectionIndex >= 0) {
-            print('adjust');
-            previousResult = _updateChildSelectionInParentCoodinate(_selectionChildren[selectionIndex], start, end, SelectionResult.previous);
-            selectionIndex -= 1;
-          }
+          do {
+            _currentSelectionIndex = previousSelectionIndex;
+            previousSelectionIndex  = _currentSelectionIndex - 1;
+            previousResult = _updateChildSelectionInParentCoodinate(
+              _selectionChildren[previousSelectionIndex],
+              start,
+              end,
+              SelectionResult.previous,
+            );
+          } while (previousResult == SelectionResult.previous && previousSelectionIndex >= 0);
           return previousResult == SelectionResult.previous ? SelectionResult.previous : SelectionResult.end;
         }
     }
@@ -3704,7 +3781,7 @@ mixin ContainerRenderObjectMixin<ChildType extends RenderObject, ParentDataType 
       size = (this as RenderBox).size;
     }
     final Rect rect = Rect.fromLTRB(0, 0, size.width, size.height);
-    print('updateSelection $this, $start to $end, $rect, _currentSelectionChild = $_currentSelectionChild, has overlap? ${rect.overlaps(Rect.fromPoints(start, end))}');
+    print('updateSelection $this, $start to $end, $rect, _currentSelectionChild = ${_currentSelectionIndex == -1 ? null : _selectionChildren[_currentSelectionIndex]}, has overlap? ${rect.overlaps(Rect.fromPoints(start, end))}');
     if (!rect.overlaps(Rect.fromPoints(start, end))) {
       clear();
       if (end.dy <= rect.top)
@@ -3714,8 +3791,10 @@ mixin ContainerRenderObjectMixin<ChildType extends RenderObject, ParentDataType 
       return end.dx > rect.right ? SelectionResult.next : SelectionResult.previous;
     }
     late final SelectionResult result;
-    if (_currentSelectionChild == null || !_currentSelectionChild!.attached || _currentSelectionChild!.parent != this) {
-      _currentSelectionChild = null;
+    if (_currentSelectionIndex == -1 ||
+        !_selectionChildren[_currentSelectionIndex].attached ||
+        _selectionChildren[_currentSelectionIndex].parent != this) {
+      _currentSelectionIndex = -1;
       result = _initSelection(start, end);
     } else {
       result = _adjustSelection(start, end);
@@ -3790,21 +3869,25 @@ mixin LinearLayoutContainerSelectableMixin<ChildType extends RenderObject, Paren
   }
 
   @override
-  SelectionResult updateChildSelection(RenderBox child, Offset start, Offset end, SelectionResult onGoingResult) {
+  SelectionResult updateChildSelection(Selectable child, Offset start, Offset end, SelectionResult onGoingResult) {
     switch (direction) {
       case Axis.vertical: {
         var oldstart = start;
         var oldend = end;
-        start = _getEffectivePointForVerticalLayout(child, start);
-        end = _getEffectivePointForVerticalLayout(child, end);
+        if (child is RenderBox) {
+          start = _getEffectivePointForVerticalLayout(child as RenderBox, start);
+          end = _getEffectivePointForVerticalLayout(child as RenderBox, end);
+        }
         print('column $this for child $child ( $oldstart to $oldend) to ( $start to $end )');
         return super.updateChildSelection(child, start, end, onGoingResult);
       }
       case Axis.horizontal: {
         var oldstart = start;
         var oldend = end;
-        start = _getEffectivePointForHorizontalLayout(child, start);
-        end = _getEffectivePointForHorizontalLayout(child, end);
+        if (child is RenderBox) {
+          start = _getEffectivePointForHorizontalLayout(child as RenderBox, start);
+          end = _getEffectivePointForHorizontalLayout(child as RenderBox, end);
+        }
         print('row $this for child $child ( $oldstart to $oldend) to ( $start to $end )');
         return super.updateChildSelection(child, start, end, onGoingResult);
       }

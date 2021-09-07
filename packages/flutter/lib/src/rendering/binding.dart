@@ -453,6 +453,7 @@ mixin RendererBinding on BindingBase, ServicesBinding, SchedulerBinding, Gesture
     pipelineOwner.flushLayout();
     pipelineOwner.flushCompositingBits();
     pipelineOwner.flushPaint();
+    pipelineOwner.flushSelectionBoundaries();
     if (sendFramesToEngine) {
       renderView.compositeFrame(); // this sends the bits to the GPU
       pipelineOwner.flushSemantics(); // this also sends the semantics to the OS.
