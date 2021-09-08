@@ -320,6 +320,9 @@ class RenderParagraph extends RenderBox
   }
 
   @override
+  bool get enabled => true;
+
+  @override
   SelectionResult updateSelection(Offset start, Offset end) {
     final TextSelection? existingSelection = _textSelection;
     _textSelection = null;
