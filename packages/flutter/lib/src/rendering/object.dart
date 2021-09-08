@@ -3844,16 +3844,33 @@ mixin LinearLayoutContainerSelectableMixin<ChildType extends RenderObject, Paren
   }
 
   Offset _getEffectivePointForHorizontalLayout(RenderBox child, Offset point) {
-    // For a widget in vertical layout, we can consider different areas as shown
+    // For a widget in horizontal layout, we can consider different areas as shown
     // below:
-    //            |
-    //            |    Area 1
-    //            |
-    //            +============+
-    //     Area 2 | Some widget|
-    //  - - - - - +============+
-    //                            Area 3
     //
+    //                Area 1
+    //
+    //  - - - - - +============+ - - - - - -
+    //     Area 2 | Some widget|  Area 4
+    //  - - - - - +============+ - - - - - -
+    //                 Area 3
+    // For points inside the widget:
+    //  Their effective locations are unchanged.
+    //
+    // For points in Area 1:
+    //   clamp the x axis to the widget's [left, right], and set y axis to
+    //   widget's top
+    //
+    // For points in Area 2:
+    //   project them the widget's left bound if this is the first child;
+    //   otherwise, move to top-left.
+    //
+    // For Points in Area 3:
+    //   clamp the x axis to the widget's [left, right], and set y axis to
+    //   widget's bottom
+    //
+    // For Points in Area 4:
+    //   project them the widget's right bound if this is the last child;
+    //   otherwise, move to bottom-right
     final Rect childRect = Rect.fromLTRB(0, 0, child.size.width, child.size.height);
     if (childRect.contains(point))
       return point;
