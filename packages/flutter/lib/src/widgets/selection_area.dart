@@ -100,7 +100,7 @@ class _SelectionAreaState extends State<SelectionArea> {
   void _updateSelection(Offset offset) {
     _end = offset;
     print('_updateSelection from $_start, to $_end');
-    final Selectable? child = _renderSelectionBoundary.child;
+    final Selectable? child = _renderSelectionBoundary.selectableChild;
     if(child == null)
       return;
     final Matrix4 transform = child.getTransformTo(null);
@@ -111,7 +111,7 @@ class _SelectionAreaState extends State<SelectionArea> {
   void _cancelSelection() {
     _start = null;
     _end = null;
-    _renderSelectionBoundary.child?.clear();
+    _renderSelectionBoundary.selectableChild?.clear();
   }
 
   void _selectAll(Intent intent) {
@@ -121,7 +121,7 @@ class _SelectionAreaState extends State<SelectionArea> {
   }
 
   Future<void> _copy(Intent intent) async {
-    final Object? data = _renderSelectionBoundary.child?.copy();
+    final Object? data = _renderSelectionBoundary.selectableChild?.copy();
     if (data == null)
       return;
     Clipboard.setData(ClipboardData(text: data.toString()));

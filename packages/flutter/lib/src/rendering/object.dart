@@ -1143,16 +1143,16 @@ enum SelectionResult {
 /// The boundary of a selection that can span multiple widget.
 mixin SelectionBoundary on RenderObject {
   /// The immediate selectable children in the subtree.
-  Selectable? get child => _child;
-  Selectable? _child;
+  Selectable? get selectableChild => _selectableChild;
+  Selectable? _selectableChild;
 
   /// walk the subtree and collect the selectables.
   void rebuildSelectables() {
-    _child = null;
+    _selectableChild = null;
     final Selectable? selectable = Selectable.getSelectable(this);
     selectable?.rebuildSelectable();
     if (selectable?.enabled == true)
-      _child = selectable;
+      _selectableChild = selectable;
   }
 }
 
@@ -3671,6 +3671,7 @@ mixin ContainerRenderObjectMixin<ChildType extends RenderObject, ParentDataType 
         break;
       }
     }
+    print('init selection current selection child is ${_selectionChildren[_currentSelectionIndex]}');
     return overallResult;
   }
 
@@ -3709,6 +3710,9 @@ mixin ContainerRenderObjectMixin<ChildType extends RenderObject, ParentDataType 
               end,
             );
           } while (nextResult == SelectionResult.next && nextSelectionIndex < _selectionChildren.length);
+          if (nextResult == SelectionResult.end) {
+            _currentSelectionIndex =  nextSelectionIndex;
+          }
           return nextResult == SelectionResult.next ? SelectionResult.next : SelectionResult.end;
         }
       case SelectionResult.previous:
@@ -3724,6 +3728,9 @@ mixin ContainerRenderObjectMixin<ChildType extends RenderObject, ParentDataType 
               end,
             );
           } while (previousResult == SelectionResult.previous && previousSelectionIndex >= 0);
+          if (previousResult == SelectionResult.end) {
+            _currentSelectionIndex =  previousSelectionIndex;
+          }
           return previousResult == SelectionResult.previous ? SelectionResult.previous : SelectionResult.end;
         }
     }
@@ -3747,12 +3754,10 @@ mixin ContainerRenderObjectMixin<ChildType extends RenderObject, ParentDataType 
       return end.dx > rect.right ? SelectionResult.next : SelectionResult.previous;
     }
     late final SelectionResult result;
-    if (_currentSelectionIndex == -1 ||
-        !_selectionChildren[_currentSelectionIndex].attached ||
-        _selectionChildren[_currentSelectionIndex].parent != this) {
-      _currentSelectionIndex = -1;
+    if (_currentSelectionIndex == -1) {
       result = _initSelection(start, end);
     } else {
+      assert(_selectionChildren[_currentSelectionIndex].attached);
       result = _adjustSelection(start, end);
     }
     return result;
@@ -3786,14 +3791,20 @@ mixin LinearLayoutContainerSelectableMixin<ChildType extends RenderObject, Paren
     //
     // For Points in Area 3:
     //   We can treat them to as they are at bottom-right corner of the widget.
+    print('apply transform for ${child.toStringShort()}, from point $point');
     final Rect childRect = Rect.fromLTRB(0, 0, child.size.width, child.size.height);
-    if (childRect.contains(point))
+    if (childRect.contains(point)) {
+      print('to $point');
       return point;
+    }
     if (point.dy <= childRect.top) {
+      print('to ${childRect.topLeft}');
       return childRect.topLeft;
     } else if (point.dy <= childRect.bottom && point.dx <= childRect.left) {
+      print('to ${Offset(childRect.left, point.dy)}');
       return Offset(childRect.left, point.dy);
     } else {
+      print('to ${childRect.bottomRight}');
       return childRect.bottomRight;
     }
   }

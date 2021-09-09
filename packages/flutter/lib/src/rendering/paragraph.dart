@@ -339,10 +339,7 @@ class RenderParagraph extends RenderBox
   void rebuildSelectable() { }
 
   SelectionResult _updateTextSelection(Offset start, Offset end) {
-    if (!hasSize) {
-      return SelectionResult.previous;
-    }
-    final Rect boundingRect = Rect.fromLTWH(0, 0, size.width, size.height);
+    final Rect boundingRect = Rect.fromLTWH(0, 0, _textPainter.size.width, _textPainter.size.height);
     // This RO has not been laid out yet, it can't be selected.
     if (boundingRect.isEmpty) {
       return Selectable.selectionBasedOnRect(boundingRect, start, end);
