@@ -1136,7 +1136,7 @@ enum SelectionResult {
   /// Selection should does not reach this selectable, should look previous selectable
   previous,
   /// Part of the selectable may or may not be selected, but there are still
-  /// content to select forward.
+  /// content to select forward or backward.
   end,
 }
 

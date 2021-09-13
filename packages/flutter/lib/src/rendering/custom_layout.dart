@@ -123,7 +123,6 @@ abstract class MultiChildLayoutDelegate {
   final Listenable? _relayout;
 
   Map<Object, RenderBox>? _idToChild;
-  RenderCustomMultiChildLayoutBox? _currentDelegator;
   Set<RenderBox>? _debugChildrenNeedingLayout;
 
   /// True if a non-null LayoutChild was provided for the specified id.
