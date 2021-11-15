@@ -959,6 +959,12 @@ class _NestedScrollCoordinator implements ScrollActivityDelegate, ScrollHoldCont
     return 0.0;
   }
 
+  @override
+  double get pixels {
+    assert(false);
+    return 0.0;
+  }
+
   ScrollHoldController hold(VoidCallback holdCancelCallback) {
     beginActivity(
       HoldScrollActivity(

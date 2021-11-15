@@ -9,6 +9,7 @@ import 'dart:ui' as ui show Gradient, Shader, TextBox, PlaceholderAlignment, Tex
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/semantics.dart';
+import 'package:flutter/services.dart';
 
 import 'package:vector_math/vector_math_64.dart';
 
@@ -64,7 +65,7 @@ class PlaceholderSpanIndexSemanticsTag extends SemanticsTag {
 class RenderParagraph extends RenderBox
     with ContainerRenderObjectMixin<RenderBox, TextParentData>,
              RenderBoxContainerDefaultsMixin<RenderBox, TextParentData>,
-                  RelayoutWhenSystemFontsChangeMixin {
+                  RelayoutWhenSystemFontsChangeMixin implements Selectable {
   /// Creates a paragraph render object.
   ///
   /// The [text], [textAlign], [textDirection], [overflow], [softWrap], and
@@ -84,6 +85,7 @@ class RenderParagraph extends RenderBox
     TextWidthBasis textWidthBasis = TextWidthBasis.parent,
     ui.TextHeightBehavior? textHeightBehavior,
     List<RenderBox>? children,
+    SelectionRegistrar? selectionRegistrar,
   }) : assert(text != null),
        assert(text.debugAssertIsValid()),
        assert(textAlign != null),
@@ -95,6 +97,7 @@ class RenderParagraph extends RenderBox
        assert(textWidthBasis != null),
        _softWrap = softWrap,
        _overflow = overflow,
+       _selectionRegistrar = selectionRegistrar,
        _textPainter = TextPainter(
          text: text,
          textAlign: textAlign,
@@ -296,6 +299,148 @@ class RenderParagraph extends RenderBox
     _textPainter.textHeightBehavior = value;
     _overflowShader = null;
     markNeedsLayout();
+  }
+
+
+  /// The selection service to enable text selection, or `null` if text selection
+  /// is disabled.
+  SelectionRegistrar? get selectionRegisrar => _selectionRegistrar;
+  SelectionRegistrar? _selectionRegistrar;
+  set selectionRegisrar(SelectionRegistrar? value) {
+    if (value == selectionRegisrar)
+      return;
+    selectionRegisrar?.remove(this);
+    _selectionRegistrar = value;
+    selectionRegisrar?.add(this);
+  }
+
+  TextSelection? _textSelection;
+
+  @override
+  String? copy() {
+    final TextSelection? textSelection = _textSelection;
+    if (textSelection == null)
+      return null;
+
+    final String plainText = text.toPlainText(includeSemanticsLabels: false);
+    return plainText.substring(textSelection.start, textSelection.end);
+  }
+
+  /// Clear the current text selection, but only mark for a paint if it has
+  /// been set to a non-null value.
+  @override
+  void clearSelection() {
+    _dragSelectionStartInGlobalCoordinate = null;
+    if (_textSelection == null)
+      return;
+    _textSelection = null;
+    markNeedsPaint();
+  }
+
+  @override
+  Rect get globalRect {
+    if (!attached) {
+      return Rect.zero;
+    }
+    final Rect boundingRect = Rect.fromLTWH(0, 0, _textPainter.size.width, _textPainter.size.height);
+    final Matrix4 transform = getTransformTo(null);
+    return MatrixUtils.transformRect(transform, boundingRect);
+  }
+
+  @override
+  void selectAll() {
+    final TextSelection textSelection = TextSelection(
+      baseOffset: 0,
+      extentOffset: text.toPlainText(includeSemanticsLabels: false).length
+    );
+    if (textSelection != _textSelection) {
+      _textSelection = textSelection;
+      markNeedsPaint();
+    }
+  }
+
+  Offset? _dragSelectionStartInGlobalCoordinate;
+
+  @override
+  SelectionResult dispatchSelectionEvent(SelectionEvent event) {
+    if (!attached)
+      return SelectionResult.none;
+    final TextSelection? existingSelection = _textSelection;
+    late final SelectionResult result;
+    if (event is DragSelectionEvent) {
+      if (event is DragSelectionStartEvent) {
+        _dragSelectionStartInGlobalCoordinate = event.offset;
+        result = SelectionResult.none;
+      } else if (event is DragSelectionUpdateEvent) {
+        result = _updateDragSelection(event.offset);
+      } else if (event is DragSelectionEndEvent){
+        _dragSelectionStartInGlobalCoordinate = null;
+        result = SelectionResult.none;
+      }
+    } else {
+      throw UnimplementedError('Only support drag selection');
+    }
+    // print('update event with ${(event as DragSelectionUpdateEvent).offset} $_textSelection, result is $result');
+    // print('render paragraph $this update selection from $start to $end, _textSelection $_textSelection, result $result');
+    if (existingSelection != _textSelection) {
+      markNeedsPaint();
+    }
+    return result;
+  }
+
+  SelectionResult _updateDragSelection(Offset dragSelectionEndInGlobalCoordinate) {
+    assert(_dragSelectionStartInGlobalCoordinate != null);
+    _textSelection = null;
+    final Rect boundingRect = Rect.fromLTWH(0, 0, _textPainter.size.width, _textPainter.size.height);
+    final Matrix4 transform = getTransformTo(null);
+    transform.invert();
+    final Offset start = SelectionUtil.adjustDragOffset(
+      boundingRect,
+      MatrixUtils.transformPoint(transform, _dragSelectionStartInGlobalCoordinate!),
+    );
+    final Offset end = SelectionUtil.adjustDragOffset(
+      boundingRect,
+      MatrixUtils.transformPoint(transform, dragSelectionEndInGlobalCoordinate),
+    );
+    // This RO has not been laid out yet, it can't be selected.
+    if (boundingRect.isEmpty) {
+      return SelectionUtil.selectionBasedOnRect(boundingRect, end);
+    }
+    final Rect selectionRect = Rect.fromPoints(start, end);
+    if (selectionRect.isInfinite) {
+      _textSelection = TextSelection(baseOffset: 0, extentOffset: getPositionForOffset(Offset.infinite).offset);
+      return SelectionResult.next;
+    }
+    final Rect intersection = boundingRect.intersect(selectionRect);
+    // If width or height are negative, there is no overlap between
+    // the selection rect and the estimated bounds of this RO.
+    if (intersection.width < 0 || intersection.height < 0) {
+      return SelectionUtil.selectionBasedOnRect(boundingRect, end);
+    }
+    TextPosition startText;
+    TextPosition endText;
+    switch (textDirection) {
+      case TextDirection.rtl:
+        startText = getPositionForOffset(end);
+        endText = getPositionForOffset(start);
+        break;
+      case TextDirection.ltr:
+        startText = getPositionForOffset(start);
+        endText = getPositionForOffset(end);
+        break;
+    }
+    // print('update render paragraph "${text.toPlainText()}" $globalRect and the selection rect is $selectionRect, startText ${startText}, endText ${endText}');
+    if (startText != endText) {
+      _textSelection = TextSelection(baseOffset: startText.offset, extentOffset: endText.offset);
+    }
+    final int textLength = text.toPlainText(includeSemanticsLabels: false).length;
+    if (endText.offset >= textLength) {
+      return SelectionResult.next;
+    }
+    if (endText.offset <= 0) {
+      return SelectionResult.previous;
+    }
+    return SelectionResult.end;
   }
 
   @override
@@ -705,6 +850,10 @@ class RenderParagraph extends RenderBox
     }
   }
 
+  static final Paint _selectionPaint = Paint()
+    ..style = PaintingStyle.fill
+    ..color = const Color(0xAF6694e8);
+
   @override
   void paint(PaintingContext context, Offset offset) {
     // Ideally we could compute the min/max intrinsic width/height with a
@@ -774,6 +923,13 @@ class RenderParagraph extends RenderBox
         context.canvas.drawRect(Offset.zero & size, paint);
       }
       context.canvas.restore();
+    }
+    final TextSelection? textSelection = _textSelection;
+    if (textSelection != null) {
+      for (final TextBox textBox in getBoxesForSelection(textSelection)) {
+        context.canvas.drawRect(
+          textBox.toRect().shift(offset), _selectionPaint);
+      }
     }
   }
 
@@ -1026,6 +1182,18 @@ class RenderParagraph extends RenderBox
   void clearSemantics() {
     super.clearSemantics();
     _cachedChildNodes = null;
+  }
+
+  @override
+  void detach() {
+    selectionRegisrar?.remove(this);
+    super.detach();
+  }
+
+  @override
+  void attach(covariant PipelineOwner owner) {
+    selectionRegisrar?.add(this);
+    super.attach(owner);
   }
 
   @override

@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:math';
-
 import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
@@ -16,7 +14,6 @@ import 'media_query.dart';
 import 'overlay.dart';
 import 'scroll_controller.dart';
 import 'scroll_physics.dart';
-import 'scroll_position.dart';
 import 'scroll_view.dart';
 import 'scrollable.dart';
 import 'sliver.dart';
@@ -515,6 +512,7 @@ class SliverReorderableListState extends State<SliverReorderableList> with Ticke
   // Map of index -> child state used manage where the dragging item will need
   // to be inserted.
   final Map<int, _ReorderableItemState> _items = <int, _ReorderableItemState>{};
+  static const double _kAutoScrollVelocityScaler = 100/14;
 
   OverlayEntry? _overlayEntry;
   int? _dragIndex;
@@ -523,7 +521,6 @@ class SliverReorderableListState extends State<SliverReorderableList> with Ticke
   Offset? _finalDropPosition;
   MultiDragGestureRecognizer? _recognizer;
   int? _recognizerPointer;
-  bool _autoScrolling = false;
   // To implement the gap for the dragged item, we replace the dragged item
   // with a zero sized box, and then translate all of the later items down
   // by the size of the dragged item. This allows us to keep the order of the
@@ -533,6 +530,8 @@ class SliverReorderableListState extends State<SliverReorderableList> with Ticke
   // used to determine if the transition to the zero sized box has completed,
   // so the gap calculation can compensate for it.
   bool _dragStartTransitionComplete = false;
+
+  EdgeDraggingAutoScroller? _autoScroller;
 
   late ScrollableState _scrollable;
   Axis get _scrollDirection => axisDirectionToAxis(_scrollable.axisDirection);
@@ -544,6 +543,10 @@ class SliverReorderableListState extends State<SliverReorderableList> with Ticke
   void didChangeDependencies() {
     super.didChangeDependencies();
     _scrollable = Scrollable.of(context)!;
+    if (_autoScroller?.scrollable != _scrollable) {
+      _autoScroller?.end();
+      _autoScroller = EdgeDraggingAutoScroller(_scrollable, onScrollViewScrolled: _dragUpdateItems, velocityScaler: _kAutoScrollVelocityScaler);
+    }
   }
 
   @override
@@ -557,6 +560,7 @@ class SliverReorderableListState extends State<SliverReorderableList> with Ticke
   @override
   void dispose() {
     _dragInfo?.dispose();
+    _autoScroller!.end();
     super.dispose();
   }
 
@@ -669,7 +673,7 @@ class SliverReorderableListState extends State<SliverReorderableList> with Ticke
     setState(() {
       _overlayEntry?.markNeedsBuild();
       _dragUpdateItems();
-      _autoScrollIfNecessary();
+      _autoScroller!.start(_dragTargetRect);
     });
   }
 
@@ -716,6 +720,7 @@ class SliverReorderableListState extends State<SliverReorderableList> with Ticke
         }
         _dragInfo?.dispose();
         _dragInfo = null;
+        _autoScroller!.end();
         _resetItemGap();
         _recognizer?.dispose();
         _recognizer = null;
@@ -733,7 +738,8 @@ class SliverReorderableListState extends State<SliverReorderableList> with Ticke
   }
 
   void _dragUpdateItems() {
-    assert(_dragInfo != null);
+    if (_dragInfo == null)
+      return;
     final double gapExtent = _dragInfo!.itemExtent;
     final double proxyItemStart = _offsetExtent(_dragInfo!.dragPosition - _dragInfo!.dragOffset, _scrollDirection);
     final double proxyItemEnd = proxyItemStart + gapExtent;
@@ -810,55 +816,9 @@ class SliverReorderableListState extends State<SliverReorderableList> with Ticke
     }
   }
 
-  Future<void> _autoScrollIfNecessary() async {
-    if (!_autoScrolling && _dragInfo != null && _dragInfo!.scrollable != null) {
-      final ScrollPosition position = _dragInfo!.scrollable!.position;
-      double? newOffset;
-      const Duration duration = Duration(milliseconds: 14);
-      const double step = 1.0;
-      const double overDragMax = 20.0;
-      const double overDragCoef = 10;
-
-      final RenderBox scrollRenderBox = _dragInfo!.scrollable!.context.findRenderObject()! as RenderBox;
-      final Offset scrollOrigin = scrollRenderBox.localToGlobal(Offset.zero);
-      final double scrollStart = _offsetExtent(scrollOrigin, _scrollDirection);
-      final double scrollEnd = scrollStart + _sizeExtent(scrollRenderBox.size, _scrollDirection);
-
-      final double proxyStart = _offsetExtent(_dragInfo!.dragPosition - _dragInfo!.dragOffset, _scrollDirection);
-      final double proxyEnd = proxyStart + _dragInfo!.itemExtent;
-
-      if (_reverse) {
-        if (proxyEnd > scrollEnd && position.pixels > position.minScrollExtent) {
-          final double overDrag = max(proxyEnd - scrollEnd, overDragMax);
-          newOffset = max(position.minScrollExtent, position.pixels - step * overDrag / overDragCoef);
-        } else if (proxyStart < scrollStart && position.pixels < position.maxScrollExtent) {
-          final double overDrag = max(scrollStart - proxyStart, overDragMax);
-          newOffset = min(position.maxScrollExtent, position.pixels + step * overDrag / overDragCoef);
-        }
-      } else {
-        if (proxyStart < scrollStart && position.pixels > position.minScrollExtent) {
-          final double overDrag = max(scrollStart - proxyStart, overDragMax);
-          newOffset = max(position.minScrollExtent, position.pixels - step * overDrag / overDragCoef);
-        } else if (proxyEnd > scrollEnd && position.pixels < position.maxScrollExtent) {
-          final double overDrag = max(proxyEnd - scrollEnd, overDragMax);
-          newOffset = min(position.maxScrollExtent, position.pixels + step * overDrag / overDragCoef);
-        }
-      }
-
-      if (newOffset != null && (newOffset - position.pixels).abs() >= 1.0) {
-        _autoScrolling = true;
-        await position.animateTo(
-          newOffset,
-          duration: duration,
-          curve: Curves.linear,
-        );
-        _autoScrolling = false;
-        if (_dragInfo != null) {
-          _dragUpdateItems();
-          _autoScrollIfNecessary();
-        }
-      }
-    }
+  Rect get _dragTargetRect {
+    final Offset origin = _dragInfo!.dragPosition - _dragInfo!.dragOffset;
+    return Rect.fromLTWH(origin.dx, origin.dy, _dragInfo!.itemSize.width, _dragInfo!.itemSize.height);
   }
 
   Offset _itemOffsetAt(int index) {

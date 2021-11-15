@@ -6,7 +6,9 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
@@ -19,12 +21,14 @@ import 'notification_listener.dart';
 import 'primary_scroll_controller.dart';
 import 'restoration.dart';
 import 'restoration_properties.dart';
+import 'scroll_activity.dart';
 import 'scroll_configuration.dart';
 import 'scroll_context.dart';
 import 'scroll_controller.dart';
 import 'scroll_metrics.dart';
 import 'scroll_physics.dart';
 import 'scroll_position.dart';
+import 'selection.dart';
 import 'ticker_provider.dart';
 import 'viewport.dart';
 
@@ -33,6 +37,12 @@ export 'package:flutter/physics.dart' show Tolerance;
 /// Signature used by [Scrollable] to build the viewport through which the
 /// scrollable content is displayed.
 typedef ViewportBuilder = Widget Function(BuildContext context, ViewportOffset position);
+
+/// default speed
+const double kDefaultSelectToScrollSpeed = 1000.0;
+
+/// default trigger distance
+const double kDefaultSelectToScrollTriggerDistance = 50.0;
 
 /// A widget that scrolls.
 ///
@@ -399,7 +409,6 @@ class ScrollableState extends State<Scrollable> with TickerProviderStateMixin, R
   late ScrollBehavior _configuration;
   ScrollPhysics? _physics;
   ScrollController? _fallbackScrollController;
-
   ScrollController get _effectiveScrollController => widget.controller ?? _fallbackScrollController!;
 
   // Only call this from places that will definitely trigger a rebuild.
@@ -782,10 +791,13 @@ class ScrollableState extends State<Scrollable> with TickerProviderStateMixin, R
       controller: _effectiveScrollController,
     );
 
-    return _configuration.buildScrollbar(
-      context,
-      _configuration.buildOverscrollIndicator(context, result, details),
-      details,
+    return _ScrollableSelectionHandler(
+        state: this,
+        child: _configuration.buildScrollbar(
+          context,
+          _configuration.buildOverscrollIndicator(context, result, details),
+          details,
+        )
     );
   }
 
@@ -798,6 +810,488 @@ class ScrollableState extends State<Scrollable> with TickerProviderStateMixin, R
 
   @override
   String? get restorationId => widget.restorationId;
+}
+
+class _ScrollableSelectionHandler extends StatefulWidget {
+  const _ScrollableSelectionHandler({
+    Key? key,
+    required this.state,
+    required this.child,
+  }) : super(key: key);
+
+  final ScrollableState state;
+  final Widget child;
+
+  @override
+  _ScrollableSelectionHandlerState createState() => _ScrollableSelectionHandlerState();
+}
+
+class _ScrollableSelectionHandlerState extends State<_ScrollableSelectionHandler> implements Selectable {
+  late _ScrollableMultiSelectableSelectionUpdater _selectionUpdater;
+  SelectionRegistrar? _selectionRegistrar;
+  late EdgeDraggingAutoScroller _selectionAutoScroller;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectionUpdater = _ScrollableMultiSelectableSelectionUpdater(widget.state);
+    _selectionAutoScroller = EdgeDraggingAutoScroller(widget.state, velocityScaler: 30);
+  }
+
+  void _handleSelectablesChange(List<Selectable> selectables) {
+    _selectionUpdater.updateSelectables(selectables);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final SelectionRegistrar? selectionRegistrar = SelectionContainer.maybeOf(context);
+    if (selectionRegistrar != _selectionRegistrar) {
+      _selectionRegistrar?.remove(this);
+      selectionRegistrar?.add(this);
+      _selectionRegistrar = selectionRegistrar;
+    }
+  }
+
+  @override
+  void dispose() {
+    _selectionUpdater.clear();
+    _selectionAutoScroller.end();
+    _selectionRegistrar?.remove(this);
+    super.dispose();
+  }
+
+  @override
+  SelectionResult dispatchSelectionEvent(SelectionEvent event) {
+    final SelectionResult result = _selectionUpdater.dispatchSelectionEvent(event);
+    assert(result != SelectionResult.none || event is! DragSelectionUpdateEvent);
+    switch (result) {
+      case SelectionResult.pending:
+      case SelectionResult.none:
+        if (event is DragSelectionUpdateEvent) {
+          _selectionAutoScroller.start(_dragTargetFromEvent(event));
+          if (_selectionAutoScroller.scrolling) {
+            return SelectionResult.pending;
+          }
+          return SelectionUtil.selectionBasedOnRect(globalRect, event.offset);
+        }
+        _selectionAutoScroller.end();
+        return result;
+      case SelectionResult.previous:
+      case SelectionResult.next:
+      case SelectionResult.end:
+        assert(event is DragSelectionUpdateEvent);
+        _selectionAutoScroller.start(_dragTargetFromEvent(event as DragSelectionUpdateEvent));
+        if (_selectionAutoScroller.scrolling) {
+          return SelectionResult.pending;
+        }
+        return result;
+    }
+  }
+
+  @override
+  Object? copy() => _selectionUpdater.copy();
+
+  @override
+  void clearSelection() => _selectionUpdater.clear();
+
+  @override
+  Rect get globalRect {
+    final RenderBox renderObject = context.findRenderObject()! as RenderBox;
+    final Matrix4 transform = renderObject.getTransformTo(null);
+    return MatrixUtils.transformRect(
+        transform,
+        Rect.fromLTWH(0, 0, renderObject.size.width, renderObject.size.height)
+    );
+  }
+
+  @override
+  void selectAll() => _selectionUpdater.selectAll();
+
+  Rect _dragTargetFromEvent(DragSelectionUpdateEvent event) {
+    return Rect.fromLTWH(event.offset.dx, event.offset.dy, 0, 0);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SelectionContainer(
+      enabled: _selectionRegistrar != null,
+      onSelectablesChange: _handleSelectablesChange,
+      child: widget.child,
+    );
+  }
+}
+
+/// An auto scroller that scrolls the [scrollable] if a drag gesture drag close
+/// to its edge.
+///
+/// The [ReorderableList] uses this scroller to auto scroll the scroll view when
+/// user drag item toward the edge of the scroll view.
+class EdgeDraggingAutoScroller {
+  /// Creates a auto scroller that scrolls the [scrollable].
+  EdgeDraggingAutoScroller(this.scrollable, {this.onScrollViewScrolled, required this.velocityScaler});
+
+  /// The [Scrollable] this auto scroller is scrolling.
+  final ScrollableState scrollable;
+
+  /// Called when a scroll view is scrolled.
+  ///
+  /// The scroll view may be scrolled multiple times in a roll until the drag
+  /// target no longer triggers the auto scroll. This callback will be called
+  /// in between each scroll.
+  final VoidCallback? onScrollViewScrolled;
+
+  /// The veloocity scaler per pixel over scroll.
+  ///
+  /// How the velocity scale with the over scroll distance. The auto scroll
+  /// velocity = overscroll * velocityScaler.
+  final double velocityScaler;
+
+  late Rect _dragTarget;
+
+  /// Whether the auto scroll is on going.
+  bool get scrolling => _scrolling;
+  bool _scrolling = false;
+
+  double _offsetExtent(Offset offset, Axis scrollDirection) {
+    switch (scrollDirection) {
+      case Axis.horizontal:
+        return offset.dx;
+      case Axis.vertical:
+        return offset.dy;
+    }
+  }
+
+  double _sizeExtent(Size size, Axis scrollDirection) {
+    switch (scrollDirection) {
+      case Axis.horizontal:
+        return size.width;
+      case Axis.vertical:
+        return size.height;
+    }
+  }
+
+  AxisDirection get _axisDirection => scrollable.axisDirection;
+  Axis get _scrollDirection => axisDirectionToAxis(_axisDirection);
+
+  /// Starts the auto scroll with the drag target rectangle.
+  ///
+  /// The scroll starts to scroll the [scrollable] if the target rect is close
+  /// to the edge of the [scrollable]; otherwise, it remains stationary.
+  void start(Rect dragTarget) {
+    _dragTarget = dragTarget;
+    if (_scrolling) {
+      // The change will be picked up in the next scroll.
+      return;
+    }
+    if (!_scrolling)
+      _scroll();
+  }
+
+  /// Stop any ongoing auto scrolling.
+  void end() {
+    _scrolling = false;
+  }
+
+  Future<void> _scroll() async {
+    final RenderBox scrollRenderBox = scrollable.context.findRenderObject()! as RenderBox;
+    final Rect globalRect = MatrixUtils.transformRect(
+      scrollRenderBox.getTransformTo(null),
+      Rect.fromLTWH(0, 0, scrollRenderBox.size.width, scrollRenderBox.size.height)
+    );
+    _scrolling = true;
+    double? newOffset;
+    const double step = 1.0;
+    const double overDragMax = 20.0;
+    const double overDragCoef = 10;
+
+    final Offset scrollOrigin = globalRect.topLeft;
+    final double scrollStart = _offsetExtent(scrollOrigin, _scrollDirection);
+    final double scrollEnd = scrollStart + _sizeExtent(globalRect.size, _scrollDirection);
+
+    final double proxyStart = _offsetExtent(_dragTarget.topLeft, _scrollDirection);
+    final double proxyEnd = _offsetExtent(_dragTarget.bottomRight, _scrollDirection);
+    late double overDrag;
+    if (_axisDirection == AxisDirection.up || _axisDirection == AxisDirection.left) {
+      if (proxyEnd > scrollEnd && scrollable.position.pixels > scrollable.position.minScrollExtent) {
+        overDrag = math.max(proxyEnd - scrollEnd, overDragMax);
+        newOffset = math.max(scrollable.position.minScrollExtent, scrollable.position.pixels - overDrag);
+      } else if (proxyStart < scrollStart && scrollable.position.pixels < scrollable.position.maxScrollExtent) {
+        overDrag = math.max(scrollStart - proxyStart, overDragMax);
+        newOffset = math.min(scrollable.position.maxScrollExtent, scrollable.position.pixels + overDrag);
+      }
+    } else {
+      if (proxyStart < scrollStart && scrollable.position.pixels > scrollable.position.minScrollExtent) {
+        overDrag = math.max(scrollStart - proxyStart, overDragMax);
+        newOffset = math.max(scrollable.position.minScrollExtent, scrollable.position.pixels -  overDrag);
+      } else if (proxyEnd > scrollEnd && scrollable.position.pixels < scrollable.position.maxScrollExtent) {
+        overDrag = math.max(proxyEnd - scrollEnd, overDragMax);
+        newOffset = math.min(scrollable.position.maxScrollExtent, scrollable.position.pixels + overDrag);
+      }
+    }
+
+    if (newOffset == null || (newOffset - scrollable.position.pixels).abs() < 1.0) {
+      // Drag should not trigger scroll.
+      _scrolling = false;
+      return;
+    }
+    final Duration duration = Duration(milliseconds: (1000 / velocityScaler).round());
+    await scrollable.position.animateTo(
+      newOffset,
+      duration: duration,
+      curve: Curves.linear,
+    );
+    if (onScrollViewScrolled != null)
+      onScrollViewScrolled!();
+    if (_scrolling)
+      await _scroll();
+  }
+}
+
+/// This updater handles the case where the selectables changes frequently, and
+/// it optimizes toward scrolling updates.
+///
+/// This updater keeps track of the drag start offset related to scroll origin
+/// for every selectable. The records are used to determine whether the
+/// selection is up to date with the scroll position when it sends drag update
+/// event to a selectable.
+class _ScrollableMultiSelectableSelectionUpdater extends MultiSelectableSelectionUpdaterBase {
+
+  _ScrollableMultiSelectableSelectionUpdater(this.scrollableState);
+
+  final ScrollableState scrollableState;
+
+  @override
+  List<Selectable> get selectables => _selectables;
+  List<Selectable> _selectables = const <Selectable>[];
+
+  Offset? _currentDragStartRelatedToOrigin;
+  Offset? _currentDragUpdateRelatedToOrigin;
+
+  bool get _reverseSelection => _currentDragUpdateRelatedToOrigin!.dy < _currentDragStartRelatedToOrigin!.dy;
+
+  final Map<Selectable, double?> _selectableUpdateScrollOffsetRecords = <Selectable, double?>{};
+
+  // There may be existing selection on the `_selectables`. This method finds
+  // the nodes in the `other` that also exist in the `_selectables`. Their
+  // selection don't need to be updated if their order doesn't change. Other
+  // nodes need to either be added or removed from the
+  // `_selectableUpdateScrollOffsetRecords`, and their selections need to be
+  // updated.
+  //
+  // This method finds the first node in `other` that is also exist in `_selectables`.
+  // That node is called the anchor, and then every node up to the anchor in both
+  // lists will be updated accordingly. Once that is done, it recursively perform
+  // the same operation to find the next anchor until it reaches the end of both
+  // list.
+  //
+  // For example:
+  //
+  // other = [A, B, C, H, E, F]
+  // _selectables = [H ,G, B, C, E, I] existing selection starts at H end in I.
+  //
+  // 1st iter:
+  // The anchor is B, so A will be added to the records
+  // without any selection update. H and G's selections will be cleared and
+  // remove from the records. Nothing will happen to B because it is the anchor.
+  //
+  // 2nd iter:
+  // The anchor is C. No node is in between on both lists, so
+  // nothing happens
+  //
+  // 3rd iter:
+  // The anchor is E, so H is added to the records. Since we have already past the
+  // existing selection start, its selection needs to be updated.
+  //
+  // 4th iter:
+  // No Anchor. The rest of _selectables are removed from the records,
+  // and their selections are cleared. Since we reaches the selection end, the
+  // previous anchor, E, is set to be current selection end. The rest of `other`
+  // are added to the records. Since we have already past the selection end,
+  // their selections don't need to be updated.
+  //
+  // After update, _selectables = [A, B, C, H, E, F] selection starts at B and
+  // end in E
+  void updateSelectables(List<Selectable> other) {
+    if (_selectables == other) {
+      return;
+    }
+
+    late int newListIndex;
+    late int oldListIndex;
+    late int increment;
+    late bool Function(int index) newListBoundaryCheck;
+    late bool Function(int index) oldListBoundaryCheck;
+    // If there is no ongoing selection, it doesn't matter which direction to
+    // perform the update.
+    if (_currentDragStartRelatedToOrigin != null &&
+        _currentDragUpdateRelatedToOrigin != null &&
+        _reverseSelection) {
+      newListIndex = other.length - 1;
+      oldListIndex = _selectables.length - 1;
+      increment = -1;
+      newListBoundaryCheck = (int index) => index >= 0;
+      oldListBoundaryCheck = newListBoundaryCheck;
+    } else {
+      newListIndex = 0;
+      oldListIndex = 0;
+      increment = 1;
+      newListBoundaryCheck = (int index) => index < other.length;
+      oldListBoundaryCheck = (int index) => index < _selectables.length;
+    }
+    bool hasFoundDragSelectionStart = false;
+    bool hasFoundDragSelectionEnd = false;
+
+    void updateRecordsAndExistingSelectionUntilNextAnchor() {
+      // Finds first element in the new list that is in the old list. This will
+      // be the anchor point for updating the selection.
+      final int previousAnchor = newListIndex;
+      while (newListBoundaryCheck(newListIndex)) {
+        if (_selectableUpdateScrollOffsetRecords.containsKey(
+            other[newListIndex])) {
+          break;
+        }
+        _selectableUpdateScrollOffsetRecords[other[newListIndex]] = null;
+        if (hasFoundDragSelectionStart && !hasFoundDragSelectionEnd) {
+          // Every node between previous selection start and the anchor node needs
+          // to have a valid selection. This node can either a existing node from
+          // the old list or a newly added node. In either case, it needs to
+          // be updated with latest drag update.
+          final Offset deltaToOrigin = _getDeltaToOrigin();
+          final Offset startOffset = _currentDragStartRelatedToOrigin!
+              .translate(-deltaToOrigin.dx, -deltaToOrigin.dy);
+          dispatchSelectionEventToChild(other[newListIndex], DragSelectionStartEvent(offset: startOffset));
+          if (_currentDragUpdateRelatedToOrigin != null) {
+            final Offset updateOffset = _currentDragUpdateRelatedToOrigin!.translate(-deltaToOrigin.dx, -deltaToOrigin.dy);
+            dispatchSelectionEventToChild(other[newListIndex], DragSelectionUpdateEvent(offset: updateOffset));
+          }
+        }
+        newListIndex += increment;
+      }
+      if (!newListBoundaryCheck(newListIndex)) {
+        // There is no anchor point, remove the record and reset focus for the
+        // rest of the selectable in the old list
+        while(oldListBoundaryCheck(oldListIndex)) {
+          _resetFocusAndRemoveFromRecords(_selectables[oldListIndex]);
+          oldListIndex += increment;
+          if (currentSelectionIndex == oldListIndex) {
+            currentSelectionIndex = previousAnchor;
+          }
+        }
+        return;
+      }
+      // Finds the anchor index in the old list.
+      while (oldListBoundaryCheck(oldListIndex)) {
+        if (_selectableUpdateScrollOffsetRecords[_selectables[oldListIndex]] != null) {
+          hasFoundDragSelectionStart = true;
+        }
+        if (other[newListIndex] == _selectables[oldListIndex]) {
+          break;
+        }
+        // Even if this selectable in the old list may still be in the new list
+        // after newListIndex, its selection still needs to be reset because
+        // it will be in a different location. The new selection of such
+        // selectable will be update in the future recursive calls to
+        // updateRecordsAndExistingSelectionUntilNextAnchor.
+        _resetFocusAndRemoveFromRecords(_selectables[oldListIndex]);
+        oldListIndex += increment;
+      }
+      assert(oldListBoundaryCheck(oldListIndex) &&
+          _selectables[oldListIndex] == other[newListIndex]);
+      if (currentSelectionIndex == oldListIndex) {
+        hasFoundDragSelectionEnd = true;
+        currentSelectionIndex = newListIndex;
+      }
+      newListIndex += increment;
+      oldListIndex += increment;
+      updateRecordsAndExistingSelectionUntilNextAnchor();
+    }
+
+    updateRecordsAndExistingSelectionUntilNextAnchor();
+    _selectables = other;
+    if (currentSelectionIndex != -1) {
+      final Offset deltaToOrigin = _getDeltaToOrigin();
+      final Offset updateOffset = _currentDragUpdateRelatedToOrigin!.translate(
+          -deltaToOrigin.dx, -deltaToOrigin.dy);
+      dispatchSelectionEvent(DragSelectionUpdateEvent(offset: updateOffset));
+    }
+    assert((){
+      assert(_selectables.length == _selectableUpdateScrollOffsetRecords.length);
+      for (final Selectable selectable in _selectables) {
+        assert(_selectableUpdateScrollOffsetRecords.containsKey(selectable));
+      }
+      return true;
+    }());
+  }
+
+  void _resetFocusAndRemoveFromRecords(Selectable selectable) {
+    _selectableUpdateScrollOffsetRecords.remove(selectable);
+    dispatchSelectionEventToChild(selectable, const DragSelectionEndEvent());
+    selectable.clearSelection();
+  }
+
+  @override
+  void clear() {
+    for (final Selectable selectable in _selectableUpdateScrollOffsetRecords.keys) {
+      _selectableUpdateScrollOffsetRecords[selectable] = null;
+    }
+    super.clear();
+  }
+
+  @override
+  SelectionResult dispatchSelectionEvent(SelectionEvent event) {
+    if (event is DragSelectionStartEvent) {
+      final Offset deltaToOrigin = _getDeltaToOrigin();
+      _currentDragStartRelatedToOrigin = event.offset.translate(deltaToOrigin.dx, deltaToOrigin.dy);
+    } else if (event is DragSelectionUpdateEvent) {
+      final Offset deltaToOrigin = _getDeltaToOrigin();
+      _currentDragUpdateRelatedToOrigin = event.offset.translate(deltaToOrigin.dx, deltaToOrigin.dy);
+    }
+    return super.dispatchSelectionEvent(event);
+  }
+
+  @override
+  SelectionResult dispatchSelectionEventToChild(Selectable selectable, SelectionEvent event) {
+    if (event is DragSelectionStartEvent) {
+      _selectableUpdateScrollOffsetRecords[selectable] = scrollableState.position.pixels;
+    } else if (event is DragSelectionUpdateEvent) {
+      if (_selectableUpdateScrollOffsetRecords[selectable] == null) {
+        final Offset deltaToOrigin = _getDeltaToOrigin();
+        final Offset startOffset =_currentDragStartRelatedToOrigin!.translate(-deltaToOrigin.dx, -deltaToOrigin.dy);
+        super.dispatchSelectionEventToChild(selectable, DragSelectionStartEvent(offset: startOffset));
+      } else {
+        final double scrollOffsetDelta = scrollableState.position.pixels -
+            _selectableUpdateScrollOffsetRecords[selectable]!;
+        if (scrollOffsetDelta.abs() > precisionErrorTolerance) {
+          // The scroll offset when it received the drag start has changed. Update
+          // the drag metrics by synthesize drag end and start event.
+          super.dispatchSelectionEventToChild(
+              selectable, const DragSelectionEndEvent());
+          selectable.clearSelection();
+          final Offset deltaToOrigin = _getDeltaToOrigin();
+          final Offset startOffset = _currentDragStartRelatedToOrigin!
+              .translate(-deltaToOrigin.dx, -deltaToOrigin.dy);
+          super.dispatchSelectionEventToChild(
+              selectable, DragSelectionStartEvent(offset: startOffset));
+        }
+      }
+      _selectableUpdateScrollOffsetRecords[selectable] = scrollableState.position.pixels;
+    }
+    return super.dispatchSelectionEventToChild(selectable, event);
+  }
+
+  Offset _getDeltaToOrigin() {
+    switch (scrollableState.axisDirection) {
+      case AxisDirection.down:
+        return Offset(0, scrollableState.position.pixels);
+      case AxisDirection.up:
+        return Offset(0, -scrollableState.position.pixels);
+      case AxisDirection.left:
+        return Offset(-scrollableState.position.pixels, 0);
+      case AxisDirection.right:
+        return Offset(scrollableState.position.pixels, 0);
+    }
+  }
 }
 
 /// Describes the aspects of a Scrollable widget to inform inherited widgets

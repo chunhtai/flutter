@@ -29,6 +29,9 @@ abstract class ScrollActivityDelegate {
   /// The direction in which the scroll view scrolls.
   AxisDirection get axisDirection;
 
+  /// The current pixels.
+  double get pixels;
+
   /// Update the scroll position to the given pixel value.
   ///
   /// Returns the overscroll, if any. See [ScrollPosition.setPixels] for more

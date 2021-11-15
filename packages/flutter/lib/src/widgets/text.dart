@@ -10,6 +10,7 @@ import 'basic.dart';
 import 'framework.dart';
 import 'inherited_theme.dart';
 import 'media_query.dart';
+import 'selection.dart';
 
 // Examples can assume:
 // late String _name;
@@ -540,6 +541,7 @@ class Text extends StatelessWidget {
         text: data,
         children: textSpan != null ? <InlineSpan>[textSpan!] : null,
       ),
+      selectionRegistrar: SelectionContainer.maybeOf(context),
     );
     if (semanticsLabel != null) {
       result = Semantics(
