@@ -314,6 +314,12 @@ class RenderParagraph extends RenderBox
     selectionRegisrar?.add(this);
   }
 
+  /// Gets the current text selection.
+  ///
+  /// A RenderParagraph can only be selected if it is under a [SelectionArea].
+  /// Otherwise, this returns null.
+  @visibleForTesting
+  TextSelection? get textSelection => _textSelection;
   TextSelection? _textSelection;
 
   @override

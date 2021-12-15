@@ -5,6 +5,7 @@
 import 'dart:ui' as ui show TextHeightBehavior;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 
 import 'basic.dart';
 import 'framework.dart';
@@ -519,6 +520,7 @@ class Text extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final SelectionRegistrar? registrar = SelectionContainer.maybeOf(context);
     final DefaultTextStyle defaultTextStyle = DefaultTextStyle.of(context);
     TextStyle? effectiveTextStyle = style;
     if (style == null || style!.inherit)
@@ -541,7 +543,7 @@ class Text extends StatelessWidget {
         text: data,
         children: textSpan != null ? <InlineSpan>[textSpan!] : null,
       ),
-      selectionRegistrar: SelectionContainer.maybeOf(context),
+      selectionRegistrar: registrar,
     );
     if (semanticsLabel != null) {
       result = Semantics(
@@ -550,6 +552,12 @@ class Text extends StatelessWidget {
         child: ExcludeSemantics(
           child: result,
         ),
+      );
+    }
+    if (registrar != null) {
+      result = MouseRegion(
+        cursor: SystemMouseCursors.text,
+        child: result,
       );
     }
     return result;

@@ -864,7 +864,6 @@ class _ScrollableSelectionHandlerState extends State<_ScrollableSelectionHandler
   @override
   SelectionResult dispatchSelectionEvent(SelectionEvent event) {
     final SelectionResult result = _selectionUpdater.dispatchSelectionEvent(event);
-    assert(result != SelectionResult.none || event is! DragSelectionUpdateEvent);
     switch (result) {
       case SelectionResult.pending:
       case SelectionResult.none:
@@ -1001,9 +1000,7 @@ class EdgeDraggingAutoScroller {
     );
     _scrolling = true;
     double? newOffset;
-    const double step = 1.0;
     const double overDragMax = 20.0;
-    const double overDragCoef = 10;
 
     final Offset scrollOrigin = globalRect.topLeft;
     final double scrollStart = _offsetExtent(scrollOrigin, _scrollDirection);
