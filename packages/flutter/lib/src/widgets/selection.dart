@@ -291,11 +291,11 @@ abstract class MultiSelectableSelectionUpdaterBase {
 
   /// Initialize the selection of the selectable children.
   ///
-  /// The goal is to find which selectable child the selection starts on
+  /// The goal is to find the selectable child that contains the selection edge.
   /// Returns [SelectionResult.end] if the selection edge ends on any of the
   /// children. Otherwise, it returns [SelectionResult.previous] if the selection
-  /// should start before all of its children. Returns [SelectionResult.next]
-  /// if the selection should start after all of its children.
+  /// does not reach any of its children. Returns [SelectionResult.next]
+  /// if the selection covers all of its children.
   SelectionResult _initSelection(DragSelectionUpdateEvent event) {
     for (int index = 0; index < selectables.length; index += 1){
       final Selectable child =  selectables[index];
@@ -333,60 +333,59 @@ abstract class MultiSelectableSelectionUpdaterBase {
   /// selectable that contains the selection edge, and finds forward or backward
   /// if that selectable no longer contains the selection edge.
   SelectionResult _adjustSelection(DragSelectionUpdateEvent event) {
-    assert(currentSelectionIndex != -1);
+    assert(currentSelectionIndex != -1 &&
+           currentSelectionIndex < selectables.length &&
+           currentSelectionIndex >= 0);
     late SelectionResult result;
+    bool? forward;
+    // This loop looks forward if currentSelectionIndex returns next, or backward
+    // if it returns forward. The terminate condition are:
+    // 1. the selectable returns end, pending, none.
+    // 2. the selectable returns previous when looking forward.
+    // 2. the selectable returns next when looking backward.
     while (currentSelectionIndex < selectables.length &&
         currentSelectionIndex >= 0) {
       result = dispatchSelectionEventToChild(selectables[currentSelectionIndex], event);
       switch (result) {
         case SelectionResult.end:
         case SelectionResult.pending:
+        case SelectionResult.none:
           return result;
         case SelectionResult.next:
-          if (currentSelectionIndex == selectables.length -1) {
-            return result;
-          }
-          currentSelectionIndex += 1;
-          result = dispatchSelectionEventToChild(selectables[currentSelectionIndex], event);
-          if (result == SelectionResult.end ||
-              result == SelectionResult.pending) {
-            return result;
-          }
-          if (result == SelectionResult.previous) {
-            currentSelectionIndex -= 1;
-            return SelectionResult.end;
-          }
-          break;
-        case SelectionResult.previous:
-          if (currentSelectionIndex == 0) {
-            return result;
-          }
-          currentSelectionIndex -= 1;
-          result = dispatchSelectionEventToChild(selectables[currentSelectionIndex], event);
-          if (result == SelectionResult.end ||
-              result == SelectionResult.pending) {
-            return result;
-          }
-          if (result == SelectionResult.next) {
+          if (forward == false) {
             currentSelectionIndex += 1;
             return SelectionResult.end;
           }
+          if (currentSelectionIndex == selectables.length -1) {
+            return result;
+          }
+          forward = true;
+          currentSelectionIndex += 1;
           break;
-        case SelectionResult.none:
-          // DragSelectionUpdate should never return none.
-          assert(false);
-          return SelectionResult.none;
+        case SelectionResult.previous:
+          if (forward == true) {
+            currentSelectionIndex -= 1;
+            return SelectionResult.end;
+          }
+          if (currentSelectionIndex == 0) {
+            return result;
+          }
+          forward = false;
+          currentSelectionIndex -= 1;
+          break;
       }
     }
-    return result;
+    // Should not reach here.
+    assert(false);
+    return SelectionResult.none;
   }
 }
 
 /// A selection updater that assumes the selectable child changes infrequently
 /// and without a specific rule.
 ///
-/// The updater reset the selection every time a new selectable has been added
-/// or removed from the selectables.
+/// This updater resets the selection every time a new selectable has been added
+/// or removed from the list of selectable.
 class StaticMultiSelectableSelectionUpdater extends MultiSelectableSelectionUpdaterBase {
   @override
   List<Selectable> get selectables => _selectables;

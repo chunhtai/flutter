@@ -1145,7 +1145,6 @@ class _ScrollableMultiSelectableSelectionUpdater extends MultiSelectableSelectio
     void updateRecordsAndExistingSelectionUntilNextAnchor() {
       // Finds first element in the new list that is in the old list. This will
       // be the anchor point for updating the selection.
-      final int previousAnchor = newListIndex;
       while (newListBoundaryCheck(newListIndex)) {
         if (_selectableUpdateScrollOffsetRecords.containsKey(
             other[newListIndex])) {
@@ -1175,7 +1174,7 @@ class _ScrollableMultiSelectableSelectionUpdater extends MultiSelectableSelectio
           _resetFocusAndRemoveFromRecords(_selectables[oldListIndex]);
           oldListIndex += increment;
           if (currentSelectionIndex == oldListIndex) {
-            currentSelectionIndex = previousAnchor;
+            currentSelectionIndex = other.length - 1;
           }
         }
         return;
@@ -1209,6 +1208,10 @@ class _ScrollableMultiSelectableSelectionUpdater extends MultiSelectableSelectio
 
     updateRecordsAndExistingSelectionUntilNextAnchor();
     _selectables = other;
+
+    assert(currentSelectionIndex < _selectables.length &&
+           currentSelectionIndex >= -1);
+
     if (currentSelectionIndex != -1) {
       final Offset deltaToOrigin = _getDeltaToOrigin();
       final Offset updateOffset = _currentDragUpdateRelatedToOrigin!.translate(

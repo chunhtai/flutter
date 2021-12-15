@@ -105,11 +105,12 @@ class SelectionUtil {
     if (targetRect.contains(point)) {
       return point;
     }
-    if (point.dy <= targetRect.top) {
+    if (point.dy <= targetRect.top ||
+        point.dy <= targetRect.bottom && point.dx <= targetRect.left) {
+      // Area 1
       return targetRect.topLeft;
-    } else if (point.dy <= targetRect.bottom && point.dx <= targetRect.left) {
-      return Offset(targetRect.left, point.dy);
     } else {
+      // Area 2
       return targetRect.bottomRight;
     }
   }
