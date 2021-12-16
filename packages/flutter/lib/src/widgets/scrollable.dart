@@ -1119,6 +1119,7 @@ class _ScrollableMultiSelectableSelectionUpdater extends MultiSelectableSelectio
     late int increment;
     late bool Function(int index) newListBoundaryCheck;
     late bool Function(int index) oldListBoundaryCheck;
+    late bool selectionEndsAtLastIndex;
     // If there is no ongoing selection, it doesn't matter which direction to
     // perform the update.
     if (_currentDragStartRelatedToOrigin != null &&
@@ -1129,16 +1130,17 @@ class _ScrollableMultiSelectableSelectionUpdater extends MultiSelectableSelectio
       increment = -1;
       newListBoundaryCheck = (int index) => index >= 0;
       oldListBoundaryCheck = newListBoundaryCheck;
+      selectionEndsAtLastIndex = currentSelectionIndex == 0;
     } else {
       newListIndex = 0;
       oldListIndex = 0;
       increment = 1;
       newListBoundaryCheck = (int index) => index < other.length;
       oldListBoundaryCheck = (int index) => index < _selectables.length;
+      selectionEndsAtLastIndex = currentSelectionIndex != -1 &&
+                                 currentSelectionIndex == _selectables.length - 1;
     }
-    bool hasFoundDragSelectionStart = false;
     bool hasFoundDragSelectionEnd = false;
-
     void updateRecordsAndExistingSelectionUntilNextAnchor() {
       // Finds first element in the new list that is in the old list. This will
       // be the anchor point for updating the selection.
@@ -1148,7 +1150,8 @@ class _ScrollableMultiSelectableSelectionUpdater extends MultiSelectableSelectio
           break;
         }
         _selectableUpdateScrollOffsetRecords[other[newListIndex]] = null;
-        if (hasFoundDragSelectionStart && !hasFoundDragSelectionEnd) {
+        if (_currentDragStartRelatedToOrigin != null &&
+            (selectionEndsAtLastIndex || !hasFoundDragSelectionEnd)) {
           // Every node between previous selection start and the anchor node needs
           // to have a valid selection. This node can either a existing node from
           // the old list or a newly added node. In either case, it needs to
@@ -1158,6 +1161,9 @@ class _ScrollableMultiSelectableSelectionUpdater extends MultiSelectableSelectio
               .translate(-deltaToOrigin.dx, -deltaToOrigin.dy);
           dispatchSelectionEventToChild(other[newListIndex], DragSelectionStartEvent(offset: startOffset));
           if (_currentDragUpdateRelatedToOrigin != null) {
+            // We should probably also update currentSelectionIndex here so that
+            // we don't need to send duplicate update at the end to figure out
+            // the new currentSelectionIndex.
             final Offset updateOffset = _currentDragUpdateRelatedToOrigin!.translate(-deltaToOrigin.dx, -deltaToOrigin.dy);
             dispatchSelectionEventToChild(other[newListIndex], DragSelectionUpdateEvent(offset: updateOffset));
           }
@@ -1178,9 +1184,6 @@ class _ScrollableMultiSelectableSelectionUpdater extends MultiSelectableSelectio
       }
       // Finds the anchor index in the old list.
       while (oldListBoundaryCheck(oldListIndex)) {
-        if (_selectableUpdateScrollOffsetRecords[_selectables[oldListIndex]] != null) {
-          hasFoundDragSelectionStart = true;
-        }
         if (other[newListIndex] == _selectables[oldListIndex]) {
           break;
         }
@@ -1235,6 +1238,8 @@ class _ScrollableMultiSelectableSelectionUpdater extends MultiSelectableSelectio
     for (final Selectable selectable in _selectableUpdateScrollOffsetRecords.keys) {
       _selectableUpdateScrollOffsetRecords[selectable] = null;
     }
+    _currentDragStartRelatedToOrigin = null;
+    _currentDragUpdateRelatedToOrigin = null;
     super.clear();
   }
 
