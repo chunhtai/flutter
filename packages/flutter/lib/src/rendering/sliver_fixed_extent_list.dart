@@ -68,7 +68,7 @@ abstract class RenderSliverFixedExtentBoxAdaptor extends RenderSliverMultiBoxAda
     if (itemExtent > 0.0) {
       final double actual = scrollOffset / itemExtent;
       final int round = actual.round();
-      if ((actual - round).abs() < precisionErrorTolerance) {
+      if ((actual * itemExtent - round * itemExtent).abs() < precisionErrorTolerance) {
         return round;
       }
       return actual.floor();

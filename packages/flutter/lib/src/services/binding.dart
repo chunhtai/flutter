@@ -38,6 +38,7 @@ mixin ServicesBinding on BindingBase, SchedulerBinding {
     SystemChannels.lifecycle.setMessageHandler(_handleLifecycleMessage);
     SystemChannels.platform.setMethodCallHandler(_handlePlatformMessage);
     readInitialLifecycleStateFromNativeWindow();
+    ui.window.onSelectionMouseClick = _handleSelectionRightClick;
   }
 
   /// The current [ServicesBinding], if one has been created.
@@ -324,6 +325,20 @@ mixin ServicesBinding on BindingBase, SchedulerBinding {
     _systemUiChangeCallback = callback;
   }
 
+  final Map<String, GlobalSelectionService> _globalSelectionServices = <String, GlobalSelectionService>{};
+
+  void addGlobalSelectionService(GlobalSelectionService service, String viewId) {
+    _globalSelectionServices[viewId] = service;
+  }
+
+  void removeGlobalSelectionService(String viewId) {
+    _globalSelectionServices.remove(viewId);
+  }
+
+  String _handleSelectionRightClick(String viewId, ui.Offset offset) {
+    return _globalSelectionServices[viewId]!.onSelectionMouseClick(offset);
+  }
+
 }
 
 /// Signature for listening to changes in the [SystemUiMode].
@@ -400,4 +415,15 @@ class _DefaultBinaryMessenger extends BinaryMessenger {
       });
     }
   }
+}
+
+/// Provides details for current global selection.
+///
+/// Platforms, such as Web, require current selection information to work
+/// properly when users are interacting with the applications. Subclasses that
+/// implements this abstract class must register itself with the
+/// [ServicesBinding] through [ServicesBinding.instance.addGlobalSelectionService].
+abstract class GlobalSelectionService {
+
+  String onSelectionMouseClick(ui.Offset offset);
 }

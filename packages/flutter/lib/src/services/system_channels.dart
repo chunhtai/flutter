@@ -220,6 +220,11 @@ class SystemChannels {
       JSONMethodCodec(),
   );
 
+  /// A standard [MethodChannel] for handling global selection.
+  static const MethodChannel selection = OptionalMethodChannel(
+    'flutter/selection',
+  );
+
   /// A JSON [BasicMessageChannel] for keyboard events.
   ///
   /// Each incoming message received on this channel (registered using

@@ -197,6 +197,19 @@ class DragSelectionEndEvent extends DragSelectionEvent {
   }
 }
 
+/// An event that selects word at the [offset] location.
+///
+/// This event is fired when user right-click on the selectable content.
+class SelectionMouseClickSelectionEvent extends SelectionEvent {
+  /// Creates a select word selection event.
+  ///
+  /// The [offset] contains the select word location.
+  const SelectionMouseClickSelectionEvent({required this.offset}) : super._();
+
+  /// The select word location.
+  final Offset offset;
+}
+
 
 /// An registrar that keeps track of [Selectable]s in the subtree.
 ///

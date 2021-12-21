@@ -324,6 +324,7 @@ class RenderParagraph extends RenderBox
 
   @override
   String? copy() {
+    print('paragraph copy is called with _textSelection ${_textSelection}');
     final TextSelection? textSelection = _textSelection;
     if (textSelection == null)
       return null;
@@ -353,6 +354,20 @@ class RenderParagraph extends RenderBox
     return MatrixUtils.transformRect(transform, boundingRect);
   }
 
+  void _selectWordAt(Offset offset) {
+    final TextPosition position = _textPainter.getPositionForOffset(globalToLocal(offset));
+    final TextSelection newSelection = _getWordAtOffset(position);
+    _textSelection = newSelection;
+  }
+
+  TextSelection _getWordAtOffset(TextPosition position) {
+    final TextRange word = _textPainter.getWordBoundary(position);
+    if (position.offset >= word.end)
+      return TextSelection.fromPosition(position);
+
+    return TextSelection(baseOffset: word.start, extentOffset: word.end);
+  }
+
   @override
   void selectAll() {
     final TextSelection textSelection = TextSelection(
@@ -373,16 +388,17 @@ class RenderParagraph extends RenderBox
       return SelectionResult.none;
     final TextSelection? existingSelection = _textSelection;
     late final SelectionResult result;
-    if (event is DragSelectionEvent) {
-      if (event is DragSelectionStartEvent) {
-        _dragSelectionStartInGlobalCoordinate = event.offset;
-        result = SelectionResult.none;
-      } else if (event is DragSelectionUpdateEvent) {
-        result = _updateDragSelection(event.offset);
-      } else if (event is DragSelectionEndEvent){
-        _dragSelectionStartInGlobalCoordinate = null;
-        result = SelectionResult.none;
-      }
+    if (event is DragSelectionStartEvent) {
+      _dragSelectionStartInGlobalCoordinate = event.offset;
+      result = SelectionResult.none;
+    } else if (event is DragSelectionUpdateEvent) {
+      result = _updateDragSelection(event.offset);
+    } else if (event is DragSelectionEndEvent){
+      _dragSelectionStartInGlobalCoordinate = null;
+      result = SelectionResult.none;
+    } else if (event is SelectionMouseClickSelectionEvent) {
+      _selectWordAt(event.offset);
+      result = SelectionResult.none;
     } else {
       throw UnimplementedError('Only support drag selection');
     }

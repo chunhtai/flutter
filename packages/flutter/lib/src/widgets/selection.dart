@@ -6,13 +6,13 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 
 
 import 'actions.dart';
+import 'focus_manager.dart';
 import 'focus_scope.dart';
 import 'framework.dart';
 import 'gesture_detector.dart';
@@ -48,7 +48,7 @@ class SelectionArea extends StatefulWidget {
   State<SelectionArea> createState() => _SelectionAreaState();
 }
 
-class _SelectionAreaState extends State<SelectionArea> {
+class _SelectionAreaState extends State<SelectionArea> implements GlobalSelectionService {
   static const Map<ShortcutActivator, Intent> _kMacShortcuts = <ShortcutActivator, Intent>{
     SingleActivator(LogicalKeyboardKey.keyC, meta: true) : _CopyIntent(),
     SingleActivator(LogicalKeyboardKey.keyA, meta: true) : _SelectAllIntent(),
@@ -58,6 +58,12 @@ class _SelectionAreaState extends State<SelectionArea> {
     SingleActivator(LogicalKeyboardKey.keyC, control: true) : _CopyIntent(),
     SingleActivator(LogicalKeyboardKey.keyA, control: true) : _SelectAllIntent(),
   };
+
+  static int _internalIdCounter = 0;
+  static String _getNextId() {
+    _internalIdCounter +=1;
+    return _internalIdCounter.toString();
+  }
 
   late final Map<Type, Action<Intent>> _actions = <Type, Action<Intent>>{
     _CopyIntent: CallbackAction<_CopyIntent>(onInvoke: _copy),
@@ -71,6 +77,7 @@ class _SelectionAreaState extends State<SelectionArea> {
   bool get _dragInProgress => _currentDragPosition != null;
   bool _scheduledSelectionUpdate = false;
   late final FocusNode _focusNode;
+  late String _viewId;
 
   @override
   void initState() {
@@ -94,6 +101,99 @@ class _SelectionAreaState extends State<SelectionArea> {
       },
     );
     _focusNode = FocusNode();
+    _viewId = _getNextId();
+    ServicesBinding.instance!.addGlobalSelectionService(this, _viewId);
+    if (kIsWeb) {
+      // Web application needs geometry information to initialize
+      // the global selection.
+      _applyWebHook();
+    }
+  }
+
+  @override
+  String onSelectionMouseClick(Offset offset) {
+    final String currentSelection = _selectionUpdater.copy() as String? ?? '';
+    if (currentSelection.isNotEmpty)
+      return currentSelection;
+    _selectionUpdater.dispatchSelectionEvent(SelectionMouseClickSelectionEvent(offset: offset));
+    print('_selectionUpdater.copy() as String? ?? '' returns ${_selectionUpdater.copy() as String? ?? ''}');
+    return _selectionUpdater.copy() as String? ?? '';
+  }
+
+  void _applyWebHook() {
+    _focusNode.addListener(_handleFocusChange);
+    _initializeWebSelectionSystem();
+    _scheduleUpdateSizeAndTransformIfNeeded();
+  }
+
+  void _removeWebHook() {
+    _disposeWebSelectionSystem();
+    _focusNode.removeListener(_handleFocusChange);
+  }
+
+  void _disposeWebSelectionSystem() {
+    SystemChannels.selection.invokeMethod<void>(
+      'remove',
+      <String, String>{
+        'viewId': _viewId,
+      },
+    );
+  }
+
+  void _initializeWebSelectionSystem() {
+    SystemChannels.selection.invokeMethod<void>(
+      'create',
+      <String, String>{
+        'viewId': _viewId,
+      },
+    );
+  }
+
+  void _handleFocusChange() {
+    if (_focusNode.hasFocus) {
+      _scheduleUpdateSizeAndTransformIfNeeded();
+    }
+  }
+
+  Size? _lastReportedSize;
+  Matrix4? _lastReportedTransform;
+  bool _scheduledUpdateSizeAndTransform = false;
+
+  void _scheduleUpdateSizeAndTransformIfNeeded () {
+    if (_scheduledUpdateSizeAndTransform)
+      return;
+    _scheduledUpdateSizeAndTransform = true;
+    SchedulerBinding.instance!.addPostFrameCallback((Duration timeStamp) {
+      _updateSizeAndTransform();
+    });
+  }
+
+  void _updateSizeAndTransform() {
+    assert(kIsWeb);
+    _scheduledUpdateSizeAndTransform = false;
+    final RenderBox box = context.findRenderObject()! as RenderBox;
+    final Matrix4 transform = box.getTransformTo(null);
+    if (box.size != _lastReportedSize || _lastReportedTransform != transform) {
+      _lastReportedSize = box.size;
+      _lastReportedTransform = transform;
+      SystemChannels.selection.invokeMethod<void>(
+        'updateGeometry',
+        <String, dynamic>{
+          'viewId': _viewId,
+          'geometry': <String, dynamic>{
+            'width': box.size.width,
+            'height': box.size.height,
+            'transform': transform.storage,
+          },
+        }
+      );
+    }
+    if (_focusNode.hasFocus) {
+      _scheduledUpdateSizeAndTransform = true;
+      SchedulerBinding.instance!.addPostFrameCallback((Duration timeStamp) {
+        _updateSizeAndTransform();
+      });
+    }
   }
 
   void _handleDragDown(DragDownDetails details) {
@@ -165,8 +265,12 @@ class _SelectionAreaState extends State<SelectionArea> {
 
   @override
   void dispose() {
+    if (kIsWeb) {
+      _removeWebHook();
+    }
     _selectionUpdater.clear();
     _focusNode.dispose();
+    ServicesBinding.instance!.removeGlobalSelectionService(_viewId);
     super.dispose();
   }
 
@@ -266,15 +370,29 @@ abstract class MultiSelectableSelectionUpdaterBase {
   /// This may return none for DragSelectionUpdateEvent if there is no
   /// selectable child.
   SelectionResult dispatchSelectionEvent(SelectionEvent event) {
-    if (event is! DragSelectionEvent) {
-      throw UnimplementedError('only support drag selection');
+    if (event is! DragSelectionEvent && event is! SelectionMouseClickSelectionEvent) {
+      throw UnimplementedError('unsupported event $event');
     }
     if (event is DragSelectionUpdateEvent) {
       return currentSelectionIndex == -1 ? _initSelection(event) : _adjustSelection(event);
     }
-    if (event is DragSelectionStartEvent || event is DragSelectionEndEvent) {
+    else if (event is DragSelectionStartEvent || event is DragSelectionEndEvent) {
       for (final Selectable selectable in selectables) {
         dispatchSelectionEventToChild(selectable, event);
+      }
+      return SelectionResult.none;
+    }
+    else if (event is SelectionMouseClickSelectionEvent) {
+      return _handleSelectWord(event);
+    }
+    return SelectionResult.none;
+  }
+
+  SelectionResult _handleSelectWord(SelectionMouseClickSelectionEvent event) {
+    clear();
+    for(int index = 0; index < selectables.length; index +=1) {
+      if (selectables[index].globalRect.contains(event.offset)) {
+        dispatchSelectionEventToChild(selectables[index], event);
       }
     }
     return SelectionResult.none;
