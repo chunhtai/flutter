@@ -3,10 +3,12 @@
 // found in the LICENSE file.
 
 import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import 'finders.dart';
@@ -286,6 +288,12 @@ class MinimumTextContrastGuideline extends AccessibilityGuideline {
     final RenderView renderView = tester.binding.renderView;
     final OffsetLayer layer = renderView.debugLayer! as OffsetLayer;
 
+    await tester.binding.runAsync<void>(() async {
+      _loadSpacedAhem();
+    });
+
+    await tester.pumpAndSettle();
+
     late ui.Image image;
     final ByteData? byteData = await tester.binding.runAsync<ByteData?>(
       () async {
@@ -293,11 +301,23 @@ class MinimumTextContrastGuideline extends AccessibilityGuideline {
         // the last transform layer.
         final double ratio = 1 / tester.binding.window.devicePixelRatio;
         image = await layer.toImage(renderView.paintBounds, pixelRatio: ratio);
+
+        final ByteData? byteD = await image.toByteData(format: ui.ImageByteFormat.png);
+        File('/Users/chtai/git/flutter/packages/flutter_test/lib/src/myimage.png').writeAsBytesSync(byteD!.buffer.asUint8List()); // 1
+
         return image.toByteData();
       },
     );
 
     return _evaluateNode(root, tester, image, byteData!);
+  }
+
+  Future<void> _loadSpacedAhem() async {
+    // print('Platform.script.path ${dirname(Platform.script.toString())}');
+    // final File fs = File('../../fonts/SpacedAhem.ttf');
+    // final FontLoader loader = FontLoader('SpacedAhem');
+    // loader.addFont(fs.readAsBytes().then((Uint8List list) => ByteData.view(list.buffer)));
+    // await loader.load();
   }
 
   Future<Evaluation> _evaluateNode(
