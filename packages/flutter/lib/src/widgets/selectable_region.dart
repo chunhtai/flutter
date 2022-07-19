@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
@@ -225,7 +226,7 @@ class _SelectableRegionState extends State<SelectableRegion> with TextSelectionD
     _gestureRecognizers[TapGestureRecognizer] = GestureRecognizerFactoryWithHandlers<TapGestureRecognizer>(
           () => TapGestureRecognizer(debugOwner: this),
           (TapGestureRecognizer instance) {
-        instance.onTap = _clearSelection;
+        // instance.onTap = _clearSelection;
         instance.onSecondaryTapDown = _handleRightClickDown;
       },
     );
@@ -312,7 +313,7 @@ class _SelectableRegionState extends State<SelectableRegion> with TextSelectionD
           ..onStart = _handleMouseDragStart
           ..onUpdate = _handleMouseDragUpdate
           ..onEnd = _handleMouseDragEnd
-          ..onCancel = _clearSelection
+          ..onCancel = _handleMouseDragCancel
           ..dragStartBehavior = DragStartBehavior.down;
       },
     );
@@ -331,26 +332,95 @@ class _SelectableRegionState extends State<SelectableRegion> with TextSelectionD
     );
   }
 
+  Timer? _multiTapTimer;
+  int _tapped = 0;
+  bool _multiTapped = false;
+  late Offset _lastTapOffset;
+
+
+  // void _setCurrentSelectionAsDeadZone() {
+  //   if (_selectionDelegate.value.startSelectionPoint == null
+  //       || _selectionDelegate.value.endSelectionPoint == null) {
+  //     return;
+  //   }
+  //   final bool multiLine
+  //   final Matrix4 globalTransform = _selectable!.getTransformTo(null);
+  //   final Rect localRect = Rect.fromPoints(_selectionDelegate.value.startSelectionPoint.localPosition +, b)
+  //   _selectionStartHandleDragPosition = MatrixUtils.transformPoint(globalTransform, _selectionDelegate.value.startSelectionPoint);
+  //
+  //
+  // }
+
+  bool _isWithinMultiTapTolerance(Offset currentTapOffset) {
+    final Offset difference = currentTapOffset - _lastTapOffset;
+    return difference.distance <= kDoubleTapSlop;
+  }
+
+  void _multiTapTimeout() {
+    _multiTapTimer = null;
+    _tapped = 0;
+  }
+
   void _startNewMouseSelectionGesture(DragDownDetails details) {
-    widget.focusNode.requestFocus();
-    hideToolbar();
+    print('single tap down before $_tapped, $_multiTapTimer');
+    if (_multiTapTimer == null || !_isWithinMultiTapTolerance(details.globalPosition)) {
+      widget.focusNode.requestFocus();
+      hideToolbar();
+      _tapped = 1;
+    } else {
+      assert(_tapped > 0);
+      _tapped += 1;
+      _multiTapped = true;
+    }
+    _multiTapTimer?.cancel();
+    _multiTapTimer = Timer(kDoubleTapTimeout, _multiTapTimeout);
+    _lastTapOffset = details.globalPosition;
+    print('single tap down determine $_tapped, $_multiTapTimer');
     _clearSelection();
+    assert(_tapped > 0);
+    switch(_tapped) {
+      case 2:
+        _selectWordAt(offset: details.globalPosition);
+        _showHandles();
+        _showToolbar();
+        break;
+      case 3:
+        _selectWordAt(offset: details.globalPosition);
+        break;
+    }
   }
 
   void _handleMouseDragStart(DragStartDetails details) {
-    _selectStartTo(offset: details.globalPosition);
+    if (!_multiTapped || !_isWithinMultiTapTolerance(details.globalPosition)) {
+      print('_handleMouseDragStart ${details.globalPosition}');
+      _selectStartTo(offset: details.globalPosition);
+    }
   }
 
   void _handleMouseDragUpdate(DragUpdateDetails details) {
-    _selectEndTo(offset: details.globalPosition, continuous: true);
+    if (!_multiTapped || !_isWithinMultiTapTolerance(details.globalPosition)) {
+      print('_handleMouseDragStart ${details.globalPosition}');
+      _selectEndTo(offset: details.globalPosition, continuous: true);
+    }
   }
 
   void _handleMouseDragEnd(DragEndDetails details) {
     _finalizeSelection();
+    if (_multiTapTimer == null) {
+      _multiTapped = false;
+    }
+  }
+
+  void _handleMouseDragCancel() {
+    _finalizeSelection();
+    if (_multiTapTimer == null) {
+      _multiTapped = false;
+    }
   }
 
   void _handleTouchLongPressStart(LongPressStartDetails details) {
     widget.focusNode.requestFocus();
+    _finalizeSelection();
     _selectWordAt(offset: details.globalPosition);
     _showToolbar();
     _showHandles();
@@ -366,6 +436,7 @@ class _SelectableRegionState extends State<SelectableRegion> with TextSelectionD
 
   void _handleRightClickDown(TapDownDetails details) {
     widget.focusNode.requestFocus();
+    _finalizeSelection();
     _selectWordAt(offset: details.globalPosition);
     _showHandles();
     _showToolbar(location: details.globalPosition);
@@ -688,8 +759,6 @@ class _SelectableRegionState extends State<SelectableRegion> with TextSelectionD
   ///  * [_clearSelection], which clear the ongoing selection.
   ///  * [selectAll], which selects the entire content.
   void _selectWordAt({required Offset offset}) {
-    // There may be other selection ongoing.
-    _finalizeSelection();
     _selectable?.dispatchSelectionEvent(SelectWordSelectionEvent(globalPosition: offset));
   }
 
