@@ -54,7 +54,10 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Accessibility Assessments')),
+      appBar: AppBar(
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        title: const Text('Accessibility Assessments'),
+      ),
       body: Center(
         child: ListView(
           children: useCases.map<Widget>(_buildUseCaseItem).toList(),

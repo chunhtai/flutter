@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 
 import 'check_box_list_tile.dart';
 import 'check_box_list_tile_disabled.dart';
+import 'dialog.dart';
 
 abstract class UseCase {
   String get name;
@@ -16,4 +17,5 @@ abstract class UseCase {
 final List<UseCase> useCases = <UseCase>[
   CheckBoxListTile(),
   CheckBoxListTileDisabled(),
+  DialogUseCase(),
 ];
