@@ -248,6 +248,7 @@ targets:
 
   - name: Linux ci_yaml flutter roller
     recipe: infra/ci_yaml
+    bringup: true
     timeout: 30
     properties:
       tags: >
@@ -696,7 +697,6 @@ targets:
 
   - name: Linux test_ownership
     recipe: infra/test_ownership
-    bringup: true
     timeout: 60
     properties:
       tags: >
