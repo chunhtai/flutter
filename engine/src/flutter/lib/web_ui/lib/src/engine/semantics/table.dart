@@ -31,8 +31,7 @@ class SemanticTable extends SemanticRole {
 ///
 /// Screen-readers take advantage of "aria-label" to describe the visual.
 class SemanticCell extends SemanticRole {
-  SemanticCell(SemanticsObject semanticsObject)
-    : super(EngineSemanticsRole.cell, semanticsObject) {
+  SemanticCell(SemanticsObject semanticsObject) : super(EngineSemanticsRole.cell, semanticsObject) {
     setAriaRole('cell');
   }
 
@@ -56,8 +55,7 @@ class SemanticCell extends SemanticRole {
 ///
 /// Screen-readers take advantage of "aria-label" to describe the visual.
 class SemanticRow extends SemanticRole {
-  SemanticRow(SemanticsObject semanticsObject)
-    : super(EngineSemanticsRole.row, semanticsObject) {
+  SemanticRow(SemanticsObject semanticsObject) : super(EngineSemanticsRole.row, semanticsObject) {
     setAriaRole('row');
   }
 

@@ -12,8 +12,7 @@ import 'semantics.dart';
 ///
 /// Screen-readers take advantage of "aria-label" to describe the visual.
 class SemanticTab extends SemanticRole {
-  SemanticTab(SemanticsObject semanticsObject)
-    : super(EngineSemanticsRole.tab, semanticsObject) {
+  SemanticTab(SemanticsObject semanticsObject) : super(EngineSemanticsRole.tab, semanticsObject) {
     setAriaRole('tab');
   }
 

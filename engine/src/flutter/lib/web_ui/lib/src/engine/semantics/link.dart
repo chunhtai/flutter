@@ -7,8 +7,7 @@ import '../semantics.dart';
 
 /// Provides accessibility for links.
 class SemanticLink extends SemanticRole {
-  SemanticLink(SemanticsObject semanticsObject)
-    : super(EngineSemanticsRole.link, semanticsObject);
+  SemanticLink(SemanticsObject semanticsObject) : super(EngineSemanticsRole.link, semanticsObject);
 
   @override
   void setBehaviors() {

@@ -11,8 +11,7 @@ import 'semantics.dart';
 ///
 /// Screen-readers take advantage of "aria-label" to describe the visual.
 class SemanticList extends SemanticRole {
-  SemanticList(SemanticsObject semanticsObject)
-    : super(EngineSemanticsRole.list, semanticsObject) {
+  SemanticList(SemanticsObject semanticsObject) : super(EngineSemanticsRole.list, semanticsObject) {
     setAriaRole('list');
   }
 

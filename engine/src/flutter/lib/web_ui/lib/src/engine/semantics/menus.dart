@@ -13,8 +13,7 @@ import 'semantics.dart';
 ///
 /// Screen-readers takes advantage of "aria-label" to describe the visual.
 class SemanticMenu extends SemanticRole {
-  SemanticMenu(SemanticsObject semanticsObject)
-    : super(EngineSemanticsRole.menu, semanticsObject) {
+  SemanticMenu(SemanticsObject semanticsObject) : super(EngineSemanticsRole.menu, semanticsObject) {
     setAriaRole('menu');
   }
 

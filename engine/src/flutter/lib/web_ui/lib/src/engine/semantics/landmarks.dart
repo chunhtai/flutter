@@ -51,8 +51,7 @@ class SemanticContentInfo extends SemanticRole {
 ///
 /// Screen-readers takes advantage of "aria-label" to describe the visual.
 class SemanticMain extends SemanticRole {
-  SemanticMain(SemanticsObject semanticsObject)
-    : super(EngineSemanticsRole.main, semanticsObject) {
+  SemanticMain(SemanticsObject semanticsObject) : super(EngineSemanticsRole.main, semanticsObject) {
     setAriaRole('main');
   }
 
