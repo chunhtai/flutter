@@ -628,12 +628,11 @@ abstract class SemanticRole {
   ///
   /// If `labelRepresentation` is true, configures the [LabelAndValue] role with
   /// [LabelAndValue.labelRepresentation] set to true.
-  SemanticRole.withBasics(
-    this.kind,
-    this.semanticsObject, {
-    required LabelRepresentation preferredLabelRepresentation,
-  }) {
+  SemanticRole(this.kind, this.semanticsObject) {
     element = _initElement(createElement(), semanticsObject);
+  }
+
+  void withBasicsBehaviors({required LabelRepresentation preferredLabelRepresentation}) {
     addFocusManagement();
     addLiveRegion();
     addRouteName();
@@ -643,14 +642,8 @@ abstract class SemanticRole {
     addRequirableBehavior();
   }
 
-  /// Initializes a blank role for a [semanticsObject].
-  ///
-  /// Use this constructor for highly specialized cases where
-  /// [SemanticRole.withBasics] does not work, for example when the default focus
-  /// management intereferes with the widget's functionality.
-  SemanticRole.blank(this.kind, this.semanticsObject) {
-    element = _initElement(createElement(), semanticsObject);
-  }
+  /// Sets the behaviors for this role.
+  void setBehaviors();
 
   late final DomElement element;
 
@@ -701,6 +694,9 @@ abstract class SemanticRole {
     if (behaviors != null) {
       for (final SemanticBehavior behavior in behaviors) {
         if (behavior.shouldAcceptPointerEvents) {
+          if (semanticsObject.id == 1) {
+            print('id: ${semanticsObject.id}, shouldAcceptPointerEvents for ${behavior}');
+          }
           return true;
         }
       }
@@ -893,9 +889,21 @@ abstract class SemanticRole {
       updateValidationResult();
     }
 
-    final List<SemanticBehavior>? behaviors = _behaviors;
-    if (behaviors != null) {
-      for (final SemanticBehavior behavior in behaviors) {
+    final List<SemanticBehavior>? oldBehaviors = _behaviors;
+    _behaviors = null;
+    setBehaviors();
+    final List<SemanticBehavior>? newBehaviors = _behaviors;
+
+    if (oldBehaviors != null) {
+      for (final SemanticBehavior behavior in oldBehaviors) {
+        // undo old behaviors
+        behavior.dispose();
+      }
+    }
+
+    if (newBehaviors != null) {
+      for (final SemanticBehavior behavior in newBehaviors) {
+        // setup new behaviors
         behavior.update();
       }
     }
@@ -1052,14 +1060,17 @@ abstract class SemanticRole {
 /// A role used when a more specific role couldn't be assigned to the node.
 final class GenericRole extends SemanticRole {
   GenericRole(SemanticsObject semanticsObject)
-    : super.withBasics(
-        EngineSemanticsRole.generic,
-        semanticsObject,
-        // Prefer sized span because if this is a leaf it is frequently a Text widget.
-        // But if it turns out to be a container, then LabelAndValue will automatically
-        // switch to `aria-label`.
-        preferredLabelRepresentation: LabelRepresentation.sizedSpan,
-      ) {
+    : super(EngineSemanticsRole.generic, semanticsObject);
+
+  @override
+  void setBehaviors() {
+    withBasicsBehaviors(
+      // Prefer sized span because if this is a leaf it is frequently a Text widget.
+      // But if it turns out to be a container, then LabelAndValue will automatically
+      // switch to `aria-label`.
+      preferredLabelRepresentation: LabelRepresentation.sizedSpan,
+    );
+
     // Typically a tappable widget would have a more specific role, such as
     // "link", "button", "checkbox", etc. However, there are situations when a
     // tappable is not a leaf node, but contains other nodes, which can also be
@@ -1067,18 +1078,19 @@ final class GenericRole extends SemanticRole {
     // ancestor of the menu itself, while the menu may contain tappable
     // children.
     if (semanticsObject.isTappable) {
+      print('add tappable for ${semanticsObject.id}, StackTrace: ${StackTrace.current}');
       addTappable();
     }
   }
 
   @override
   void update() {
+    super.update();
     if (!semanticsObject.hasLabel) {
       // The node didn't get a more specific role, and it has no label. It is
       // likely that this node is simply there for positioning its children and
       // has no other role for the screen reader to be aware of. In this case,
       // the element does not need a `role` attribute at all.
-      super.update();
       return;
     }
 
@@ -1098,10 +1110,6 @@ final class GenericRole extends SemanticRole {
       labelAndValue!.preferredRepresentation = LabelRepresentation.sizedSpan;
       removeAttribute('role');
     }
-
-    // Call super.update last so the role is established before applying
-    // specific behaviors.
-    super.update();
   }
 
   @override
@@ -2012,10 +2020,21 @@ class SemanticsObject {
 
     // Apply updates to the DOM.
     _updateRole();
+    if (id == 1) {
+      print(
+        'id: ${id}, hitTestBehavior ${hitTestBehavior}, role ${semanticRole}, behavior ${semanticRole?._behaviors}',
+      );
+    }
 
     if (semanticRole!.acceptsPointerEvents) {
+      if (id == 1) {
+        print('id: ${id}, pointer event set to all');
+      }
       element.style.pointerEvents = 'all';
     } else {
+      if (id == 1) {
+        print('id: ${id}, pointer event set to none');
+      }
       element.style.pointerEvents = 'none';
     }
   }
@@ -2366,6 +2385,11 @@ class SemanticsObject {
     if (currentSemanticRole == null) {
       currentSemanticRole = _createSemanticRole(kind);
       semanticRole = currentSemanticRole;
+      if (id == 1) {
+        print(
+          'id: ${id}, created new!!!! role ${semanticRole}, behavior ${semanticRole?._behaviors}',
+        );
+      }
       currentSemanticRole.initState();
       currentSemanticRole.update();
     }

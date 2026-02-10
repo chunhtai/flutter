@@ -11,13 +11,14 @@ import 'semantics.dart';
 /// Screen-readers take advantage of "aria-label" to describe the visual.
 class SemanticsProgressBar extends SemanticRole {
   SemanticsProgressBar(SemanticsObject semanticsObject)
-    : super.withBasics(
-        EngineSemanticsRole.progressBar,
-        semanticsObject,
-        preferredLabelRepresentation: LabelRepresentation.ariaLabel,
-      ) {
+    : super(EngineSemanticsRole.progressBar, semanticsObject) {
     setAriaRole('progressbar');
     _updateAriaAttributes();
+  }
+
+  @override
+  void setBehaviors() {
+    withBasicsBehaviors(preferredLabelRepresentation: LabelRepresentation.ariaLabel);
   }
 
   void _updateAriaAttributes() {
@@ -46,11 +47,12 @@ class SemanticsProgressBar extends SemanticRole {
 /// Indicates a loading spinner element.
 class SemanticsLoadingSpinner extends SemanticRole {
   SemanticsLoadingSpinner(SemanticsObject semanticsObject)
-    : super.withBasics(
-        EngineSemanticsRole.loadingSpinner,
-        semanticsObject,
-        preferredLabelRepresentation: LabelRepresentation.ariaLabel,
-      );
+    : super(EngineSemanticsRole.loadingSpinner, semanticsObject);
+
+  @override
+  void setBehaviors() {
+    withBasicsBehaviors(preferredLabelRepresentation: LabelRepresentation.ariaLabel);
+  }
 
   @override
   bool focusAsRouteDefault() => focusable?.focusAsRouteDefault() ?? false;

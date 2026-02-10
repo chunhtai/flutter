@@ -22,14 +22,7 @@ import 'semantics.dart';
 class SemanticIncrementable extends SemanticRole {
   SemanticIncrementable(SemanticsObject semanticsObject)
     : _focusManager = AccessibilityFocusManager(semanticsObject.owner),
-      super.blank(EngineSemanticsRole.incrementable, semanticsObject) {
-    // The following generic roles can coexist with incrementables. Generic focus
-    // management is not used by this role because the root DOM element is not
-    // the one being focused on, but the internal `<input>` element.
-    addLiveRegion();
-    addRouteName();
-    addLabelAndValue(preferredRepresentation: LabelRepresentation.ariaLabel);
-
+      super(EngineSemanticsRole.incrementable, semanticsObject) {
     append(_element);
     _element.type = 'range';
     _element.setAttribute('role', 'slider');
@@ -69,6 +62,16 @@ class SemanticIncrementable extends SemanticRole {
     };
     EngineSemantics.instance.addGestureModeListener(_gestureModeListener);
     _focusManager.manage(semanticsObject.id, _element);
+  }
+
+  @override
+  void setBehaviors() {
+    // The following generic roles can coexist with incrementables. Generic focus
+    // management is not used by this role because the root DOM element is not
+    // the one being focused on, but the internal `<input>` element.
+    addLiveRegion();
+    addRouteName();
+    addLabelAndValue(preferredRepresentation: LabelRepresentation.ariaLabel);
   }
 
   @override

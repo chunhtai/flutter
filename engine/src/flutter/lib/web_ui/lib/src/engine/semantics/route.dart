@@ -6,7 +6,10 @@ import '../semantics.dart';
 import '../util.dart';
 
 class SemanticRouteBase extends SemanticRole {
-  SemanticRouteBase(super.kind, super.object) : super.blank() {
+  SemanticRouteBase(super.kind, super.object);
+
+  @override
+  void setBehaviors() {
     // The following behaviors can coexist with the route. Generic `RouteName`
     // and `LabelAndValue` are not used by this role because when the route
     // names its own route an `aria-label` is used instead of

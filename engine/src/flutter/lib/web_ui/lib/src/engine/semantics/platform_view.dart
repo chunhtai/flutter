@@ -23,11 +23,12 @@ import 'semantics.dart';
 ///   * https://bugs.webkit.org/show_bug.cgi?id=223798
 class SemanticPlatformView extends SemanticRole {
   SemanticPlatformView(SemanticsObject semanticsObject)
-    : super.withBasics(
-        EngineSemanticsRole.platformView,
-        semanticsObject,
-        preferredLabelRepresentation: LabelRepresentation.ariaLabel,
-      );
+    : super(EngineSemanticsRole.platformView, semanticsObject);
+
+  @override
+  void setBehaviors() {
+    withBasicsBehaviors(preferredLabelRepresentation: LabelRepresentation.ariaLabel);
+  }
 
   /// Ignores pointer events on all platform view nodes.
   ///

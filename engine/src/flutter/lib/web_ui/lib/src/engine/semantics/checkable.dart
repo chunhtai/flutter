@@ -46,12 +46,13 @@ _CheckableKind _checkableKindFromSemanticsFlag(SemanticsObject semanticsObject) 
 /// the [ui.SemanticsFlag.isInMutuallyExclusiveGroup] flag.
 class SemanticRadioGroup extends SemanticRole {
   SemanticRadioGroup(SemanticsObject semanticsObject)
-    : super.withBasics(
-        EngineSemanticsRole.radioGroup,
-        semanticsObject,
-        preferredLabelRepresentation: LabelRepresentation.ariaLabel,
-      ) {
+    : super(EngineSemanticsRole.radioGroup, semanticsObject) {
     setAriaRole('radiogroup');
+  }
+
+  @override
+  void setBehaviors() {
+    withBasicsBehaviors(preferredLabelRepresentation: LabelRepresentation.ariaLabel);
   }
 
   @override
@@ -72,11 +73,11 @@ class SemanticRadioGroup extends SemanticRole {
 class SemanticCheckable extends SemanticRole {
   SemanticCheckable(SemanticsObject semanticsObject)
     : _kind = _checkableKindFromSemanticsFlag(semanticsObject),
-      super.withBasics(
-        EngineSemanticsRole.checkable,
-        semanticsObject,
-        preferredLabelRepresentation: LabelRepresentation.ariaLabel,
-      ) {
+      super(EngineSemanticsRole.checkable, semanticsObject);
+
+  @override
+  void setBehaviors() {
+    withBasicsBehaviors(preferredLabelRepresentation: LabelRepresentation.ariaLabel);
     addTappable();
   }
 

@@ -13,12 +13,13 @@ import 'semantics.dart';
 /// Screen-readers take advantage of "aria-label" to describe the visual.
 class SemanticTab extends SemanticRole {
   SemanticTab(SemanticsObject semanticsObject)
-    : super.withBasics(
-        EngineSemanticsRole.tab,
-        semanticsObject,
-        preferredLabelRepresentation: LabelRepresentation.ariaLabel,
-      ) {
+    : super(EngineSemanticsRole.tab, semanticsObject) {
     setAriaRole('tab');
+  }
+
+  @override
+  void setBehaviors() {
+    withBasicsBehaviors(preferredLabelRepresentation: LabelRepresentation.ariaLabel);
     addTappable();
   }
 
@@ -33,12 +34,13 @@ class SemanticTab extends SemanticRole {
 /// Screen-readers take advantage of "aria-label" to describe the visual.
 class SemanticTabPanel extends SemanticRole {
   SemanticTabPanel(SemanticsObject semanticsObject)
-    : super.withBasics(
-        EngineSemanticsRole.tabPanel,
-        semanticsObject,
-        preferredLabelRepresentation: LabelRepresentation.ariaLabel,
-      ) {
+    : super(EngineSemanticsRole.tabPanel, semanticsObject) {
     setAriaRole('tabpanel');
+  }
+
+  @override
+  void setBehaviors() {
+    withBasicsBehaviors(preferredLabelRepresentation: LabelRepresentation.ariaLabel);
   }
 
   @override
@@ -52,12 +54,13 @@ class SemanticTabPanel extends SemanticRole {
 /// Screen-readers take advantage of "aria-label" to describe the visual.
 class SemanticTabList extends SemanticRole {
   SemanticTabList(SemanticsObject semanticsObject)
-    : super.withBasics(
-        EngineSemanticsRole.tabList,
-        semanticsObject,
-        preferredLabelRepresentation: LabelRepresentation.ariaLabel,
-      ) {
+    : super(EngineSemanticsRole.tabList, semanticsObject) {
     setAriaRole('tablist');
+  }
+
+  @override
+  void setBehaviors() {
+    withBasicsBehaviors(preferredLabelRepresentation: LabelRepresentation.ariaLabel);
   }
 
   @override

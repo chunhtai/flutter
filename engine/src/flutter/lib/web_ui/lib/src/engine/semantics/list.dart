@@ -12,12 +12,13 @@ import 'semantics.dart';
 /// Screen-readers take advantage of "aria-label" to describe the visual.
 class SemanticList extends SemanticRole {
   SemanticList(SemanticsObject semanticsObject)
-    : super.withBasics(
-        EngineSemanticsRole.list,
-        semanticsObject,
-        preferredLabelRepresentation: LabelRepresentation.ariaLabel,
-      ) {
+    : super(EngineSemanticsRole.list, semanticsObject) {
     setAriaRole('list');
+  }
+
+  @override
+  void setBehaviors() {
+    withBasicsBehaviors(preferredLabelRepresentation: LabelRepresentation.ariaLabel);
   }
 
   @override
@@ -31,12 +32,13 @@ class SemanticList extends SemanticRole {
 /// Screen-readers take advantage of "aria-label" to describe the visual.
 class SemanticListItem extends SemanticRole {
   SemanticListItem(SemanticsObject semanticsObject)
-    : super.withBasics(
-        EngineSemanticsRole.listItem,
-        semanticsObject,
-        preferredLabelRepresentation: LabelRepresentation.ariaLabel,
-      ) {
+    : super(EngineSemanticsRole.listItem, semanticsObject) {
     setAriaRole('listitem');
+  }
+
+  @override
+  void setBehaviors() {
+    withBasicsBehaviors(preferredLabelRepresentation: LabelRepresentation.ariaLabel);
   }
 
   @override

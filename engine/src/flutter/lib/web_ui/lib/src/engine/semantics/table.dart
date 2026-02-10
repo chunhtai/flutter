@@ -12,12 +12,13 @@ import 'semantics.dart';
 /// Screen-readers take advantage of "aria-label" to describe the visual.
 class SemanticTable extends SemanticRole {
   SemanticTable(SemanticsObject semanticsObject)
-    : super.withBasics(
-        EngineSemanticsRole.table,
-        semanticsObject,
-        preferredLabelRepresentation: LabelRepresentation.ariaLabel,
-      ) {
+    : super(EngineSemanticsRole.table, semanticsObject) {
     setAriaRole('table');
+  }
+
+  @override
+  void setBehaviors() {
+    withBasicsBehaviors(preferredLabelRepresentation: LabelRepresentation.ariaLabel);
   }
 
   @override
@@ -31,15 +32,18 @@ class SemanticTable extends SemanticRole {
 /// Screen-readers take advantage of "aria-label" to describe the visual.
 class SemanticCell extends SemanticRole {
   SemanticCell(SemanticsObject semanticsObject)
-    : super.withBasics(
-        EngineSemanticsRole.cell,
-        semanticsObject,
-        // Prefer sized span because if this is a leaf with aria-label the label
-        // will be ignored, Dom text can focus on the text but the rect is wrong.
-        // Sized span works best.
-        preferredLabelRepresentation: LabelRepresentation.sizedSpan,
-      ) {
+    : super(EngineSemanticsRole.cell, semanticsObject) {
     setAriaRole('cell');
+  }
+
+  @override
+  void setBehaviors() {
+    withBasicsBehaviors(
+      // Prefer sized span because if this is a leaf with aria-label the label
+      // will be ignored, Dom text can focus on the text but the rect is wrong.
+      // Sized span works best.
+      preferredLabelRepresentation: LabelRepresentation.sizedSpan,
+    );
   }
 
   @override
@@ -53,12 +57,13 @@ class SemanticCell extends SemanticRole {
 /// Screen-readers take advantage of "aria-label" to describe the visual.
 class SemanticRow extends SemanticRole {
   SemanticRow(SemanticsObject semanticsObject)
-    : super.withBasics(
-        EngineSemanticsRole.row,
-        semanticsObject,
-        preferredLabelRepresentation: LabelRepresentation.ariaLabel,
-      ) {
+    : super(EngineSemanticsRole.row, semanticsObject) {
     setAriaRole('row');
+  }
+
+  @override
+  void setBehaviors() {
+    withBasicsBehaviors(preferredLabelRepresentation: LabelRepresentation.ariaLabel);
   }
 
   @override
@@ -72,12 +77,13 @@ class SemanticRow extends SemanticRole {
 /// Screen-readers take advantage of "aria-label" to describe the visual.
 class SemanticColumnHeader extends SemanticRole {
   SemanticColumnHeader(SemanticsObject semanticsObject)
-    : super.withBasics(
-        EngineSemanticsRole.columnHeader,
-        semanticsObject,
-        preferredLabelRepresentation: LabelRepresentation.ariaLabel,
-      ) {
+    : super(EngineSemanticsRole.columnHeader, semanticsObject) {
     setAriaRole('columnheader');
+  }
+
+  @override
+  void setBehaviors() {
+    withBasicsBehaviors(preferredLabelRepresentation: LabelRepresentation.ariaLabel);
   }
 
   @override

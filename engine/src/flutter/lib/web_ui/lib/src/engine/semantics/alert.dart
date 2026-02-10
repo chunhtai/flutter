@@ -13,12 +13,13 @@ import 'semantics.dart';
 /// For example, a form validation error text.
 class SemanticAlert extends SemanticRole {
   SemanticAlert(SemanticsObject semanticsObject)
-    : super.withBasics(
-        EngineSemanticsRole.alert,
-        semanticsObject,
-        preferredLabelRepresentation: LabelRepresentation.ariaLabel,
-      ) {
+    : super(EngineSemanticsRole.alert, semanticsObject) {
     setAriaRole('alert');
+  }
+
+  @override
+  void setBehaviors() {
+    withBasicsBehaviors(preferredLabelRepresentation: LabelRepresentation.ariaLabel);
   }
 
   @override
@@ -33,12 +34,13 @@ class SemanticAlert extends SemanticRole {
 /// which do not justify to be [SemanticAlert]s.
 class SemanticStatus extends SemanticRole {
   SemanticStatus(SemanticsObject semanticsObject)
-    : super.withBasics(
-        EngineSemanticsRole.status,
-        semanticsObject,
-        preferredLabelRepresentation: LabelRepresentation.ariaLabel,
-      ) {
+    : super(EngineSemanticsRole.status, semanticsObject) {
     setAriaRole('status');
+  }
+
+  @override
+  void setBehaviors() {
+    withBasicsBehaviors(preferredLabelRepresentation: LabelRepresentation.ariaLabel);
   }
 
   @override

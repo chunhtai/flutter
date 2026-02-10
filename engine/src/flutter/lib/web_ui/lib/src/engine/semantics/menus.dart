@@ -14,12 +14,13 @@ import 'semantics.dart';
 /// Screen-readers takes advantage of "aria-label" to describe the visual.
 class SemanticMenu extends SemanticRole {
   SemanticMenu(SemanticsObject semanticsObject)
-    : super.withBasics(
-        EngineSemanticsRole.menu,
-        semanticsObject,
-        preferredLabelRepresentation: LabelRepresentation.ariaLabel,
-      ) {
+    : super(EngineSemanticsRole.menu, semanticsObject) {
     setAriaRole('menu');
+  }
+
+  @override
+  void setBehaviors() {
+    withBasicsBehaviors(preferredLabelRepresentation: LabelRepresentation.ariaLabel);
   }
 
   @override
@@ -76,12 +77,13 @@ class SemanticMenu extends SemanticRole {
 /// Screen-readers takes advantage of "aria-label" to describe the visual.
 class SemanticMenuBar extends SemanticRole {
   SemanticMenuBar(SemanticsObject semanticsObject)
-    : super.withBasics(
-        EngineSemanticsRole.menuBar,
-        semanticsObject,
-        preferredLabelRepresentation: LabelRepresentation.ariaLabel,
-      ) {
+    : super(EngineSemanticsRole.menuBar, semanticsObject) {
     setAriaRole('menubar');
+  }
+
+  @override
+  void setBehaviors() {
+    withBasicsBehaviors(preferredLabelRepresentation: LabelRepresentation.ariaLabel);
   }
 
   @override
@@ -137,12 +139,13 @@ class SemanticMenuBar extends SemanticRole {
 /// Screen-readers takes advantage of "aria-label" to describe the visual.
 class SemanticMenuItem extends SemanticRole {
   SemanticMenuItem(SemanticsObject semanticsObject)
-    : super.withBasics(
-        EngineSemanticsRole.menuItem,
-        semanticsObject,
-        preferredLabelRepresentation: LabelRepresentation.ariaLabel,
-      ) {
+    : super(EngineSemanticsRole.menuItem, semanticsObject) {
     setAriaRole('menuitem');
+  }
+
+  @override
+  void setBehaviors() {
+    withBasicsBehaviors(preferredLabelRepresentation: LabelRepresentation.ariaLabel);
     addDisabledBehavior();
     addTappable();
   }
@@ -168,12 +171,13 @@ class SemanticMenuItem extends SemanticRole {
 /// Screen-readers takes advantage of "aria-label" to describe the visual.
 class SemanticMenuItemCheckbox extends SemanticRole {
   SemanticMenuItemCheckbox(SemanticsObject semanticsObject)
-    : super.withBasics(
-        EngineSemanticsRole.menuItemCheckbox,
-        semanticsObject,
-        preferredLabelRepresentation: LabelRepresentation.ariaLabel,
-      ) {
+    : super(EngineSemanticsRole.menuItemCheckbox, semanticsObject) {
     setAriaRole('menuitemcheckbox');
+  }
+
+  @override
+  void setBehaviors() {
+    withBasicsBehaviors(preferredLabelRepresentation: LabelRepresentation.ariaLabel);
     addCheckedBehavior();
     addDisabledBehavior();
   }
@@ -189,12 +193,13 @@ class SemanticMenuItemCheckbox extends SemanticRole {
 /// Screen-readers takes advantage of "aria-label" to describe the visual.
 class SemanticMenuItemRadio extends SemanticRole {
   SemanticMenuItemRadio(SemanticsObject semanticsObject)
-    : super.withBasics(
-        EngineSemanticsRole.menuItemRadio,
-        semanticsObject,
-        preferredLabelRepresentation: LabelRepresentation.ariaLabel,
-      ) {
+    : super(EngineSemanticsRole.menuItemRadio, semanticsObject) {
     setAriaRole('menuitemradio');
+  }
+
+  @override
+  void setBehaviors() {
+    withBasicsBehaviors(preferredLabelRepresentation: LabelRepresentation.ariaLabel);
     addCheckedBehavior();
     addDisabledBehavior();
   }

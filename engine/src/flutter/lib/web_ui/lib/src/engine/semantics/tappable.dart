@@ -8,13 +8,14 @@ import 'package:ui/ui.dart' as ui;
 /// Sets the "button" ARIA role.
 class SemanticButton extends SemanticRole {
   SemanticButton(SemanticsObject semanticsObject)
-    : super.withBasics(
-        EngineSemanticsRole.button,
-        semanticsObject,
-        preferredLabelRepresentation: LabelRepresentation.domText,
-      ) {
-    addTappable();
+    : super(EngineSemanticsRole.button, semanticsObject) {
     setAriaRole('button');
+  }
+
+  @override
+  void setBehaviors() {
+    withBasicsBehaviors(preferredLabelRepresentation: LabelRepresentation.domText);
+    addTappable();
   }
 
   @override

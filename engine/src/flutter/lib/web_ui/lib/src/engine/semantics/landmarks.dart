@@ -12,12 +12,13 @@ import 'semantics.dart';
 /// Screen-readers takes advantage of "aria-label" to describe the visual.
 class SemanticComplementary extends SemanticRole {
   SemanticComplementary(SemanticsObject semanticsObject)
-    : super.withBasics(
-        EngineSemanticsRole.complementary,
-        semanticsObject,
-        preferredLabelRepresentation: LabelRepresentation.ariaLabel,
-      ) {
+    : super(EngineSemanticsRole.complementary, semanticsObject) {
     setAriaRole('complementary');
+  }
+
+  @override
+  void setBehaviors() {
+    withBasicsBehaviors(preferredLabelRepresentation: LabelRepresentation.ariaLabel);
   }
 
   @override
@@ -31,12 +32,13 @@ class SemanticComplementary extends SemanticRole {
 /// Screen-readers takes advantage of "aria-label" to describe the visual.
 class SemanticContentInfo extends SemanticRole {
   SemanticContentInfo(SemanticsObject semanticsObject)
-    : super.withBasics(
-        EngineSemanticsRole.contentInfo,
-        semanticsObject,
-        preferredLabelRepresentation: LabelRepresentation.ariaLabel,
-      ) {
+    : super(EngineSemanticsRole.contentInfo, semanticsObject) {
     setAriaRole('contentinfo');
+  }
+
+  @override
+  void setBehaviors() {
+    withBasicsBehaviors(preferredLabelRepresentation: LabelRepresentation.ariaLabel);
   }
 
   @override
@@ -50,12 +52,13 @@ class SemanticContentInfo extends SemanticRole {
 /// Screen-readers takes advantage of "aria-label" to describe the visual.
 class SemanticMain extends SemanticRole {
   SemanticMain(SemanticsObject semanticsObject)
-    : super.withBasics(
-        EngineSemanticsRole.main,
-        semanticsObject,
-        preferredLabelRepresentation: LabelRepresentation.ariaLabel,
-      ) {
+    : super(EngineSemanticsRole.main, semanticsObject) {
     setAriaRole('main');
+  }
+
+  @override
+  void setBehaviors() {
+    withBasicsBehaviors(preferredLabelRepresentation: LabelRepresentation.ariaLabel);
   }
 
   @override
@@ -69,12 +72,13 @@ class SemanticMain extends SemanticRole {
 /// Screen-readers takes advantage of "aria-label" to describe the visual.
 class SemanticNavigation extends SemanticRole {
   SemanticNavigation(SemanticsObject semanticsObject)
-    : super.withBasics(
-        EngineSemanticsRole.navigation,
-        semanticsObject,
-        preferredLabelRepresentation: LabelRepresentation.ariaLabel,
-      ) {
+    : super(EngineSemanticsRole.navigation, semanticsObject) {
     setAriaRole('navigation');
+  }
+
+  @override
+  void setBehaviors() {
+    withBasicsBehaviors(preferredLabelRepresentation: LabelRepresentation.ariaLabel);
   }
 
   @override
@@ -88,12 +92,13 @@ class SemanticNavigation extends SemanticRole {
 /// Screen-readers takes advantage of "aria-label" to describe the visual.
 class SemanticRegion extends SemanticRole {
   SemanticRegion(SemanticsObject semanticsObject)
-    : super.withBasics(
-        EngineSemanticsRole.region,
-        semanticsObject,
-        preferredLabelRepresentation: LabelRepresentation.ariaLabel,
-      ) {
+    : super(EngineSemanticsRole.region, semanticsObject) {
     setAriaRole('region');
+  }
+
+  @override
+  void setBehaviors() {
+    withBasicsBehaviors(preferredLabelRepresentation: LabelRepresentation.ariaLabel);
   }
 
   @override

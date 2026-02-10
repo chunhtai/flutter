@@ -12,7 +12,10 @@ import 'semantics.dart';
 /// Screen-readers take advantage of "aria-label" to describe the visual.
 class SemanticImage extends SemanticRole {
   SemanticImage(SemanticsObject semanticsObject)
-    : super.blank(EngineSemanticsRole.image, semanticsObject) {
+    : super(EngineSemanticsRole.image, semanticsObject);
+
+  @override
+  void setBehaviors() {
     // The following behaviors can coexist with images. `LabelAndValue` is
     // not used because this behavior uses special auxiliary elements to
     // supply ARIA labels.

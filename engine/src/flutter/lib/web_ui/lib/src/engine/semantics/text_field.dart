@@ -203,9 +203,12 @@ class SemanticsTextEditingStrategy extends DefaultTextEditingStrategy {
 /// events even when VoiceOver is enabled.
 class SemanticTextField extends SemanticRole {
   SemanticTextField(SemanticsObject semanticsObject)
-    : super.blank(EngineSemanticsRole.textField, semanticsObject) {
+    : super(EngineSemanticsRole.textField, semanticsObject) {
     _initializeEditableElement();
   }
+
+  @override
+  void setBehaviors() {}
 
   @override
   bool get acceptsPointerEvents {

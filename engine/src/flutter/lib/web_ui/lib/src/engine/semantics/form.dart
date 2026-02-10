@@ -12,11 +12,12 @@ import '../semantics.dart';
 /// Screen-readers take advantage of "aria-label" to describe the visual.
 class SemanticForm extends SemanticRole {
   SemanticForm(SemanticsObject semanticsObject)
-    : super.withBasics(
-        EngineSemanticsRole.form,
-        semanticsObject,
-        preferredLabelRepresentation: LabelRepresentation.ariaLabel,
-      );
+    : super(EngineSemanticsRole.form, semanticsObject);
+
+  @override
+  void setBehaviors() {
+    withBasicsBehaviors(preferredLabelRepresentation: LabelRepresentation.ariaLabel);
+  }
 
   @override
   DomElement createElement() {

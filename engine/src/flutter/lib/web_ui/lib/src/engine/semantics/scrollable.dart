@@ -16,15 +16,16 @@ import 'package:ui/ui.dart' as ui;
 /// containing the new [SemanticsObject.scrollPosition] and child positions.
 class SemanticScrollable extends SemanticRole {
   SemanticScrollable(SemanticsObject semanticsObject)
-    : super.withBasics(
-        EngineSemanticsRole.scrollable,
-        semanticsObject,
-        preferredLabelRepresentation: LabelRepresentation.ariaLabel,
-      ) {
+    : super(EngineSemanticsRole.scrollable, semanticsObject) {
     // Mark as group to prevent the browser from merging this element along with
     // all the children into one giant node. This is what happened with the
     // repro provided in https://github.com/flutter/flutter/issues/130950.
     setAriaRole('group');
+  }
+
+  @override
+  void setBehaviors() {
+    withBasicsBehaviors(preferredLabelRepresentation: LabelRepresentation.ariaLabel);
   }
 
   /// Disables browser-driven scrolling in the presence of pointer events.
