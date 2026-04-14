@@ -26,6 +26,7 @@ class MainWidget extends StatefulWidget {
   State<MainWidget> createState() => MainWidgetState();
 }
 
+
 class MainWidgetState extends State<MainWidget> {
   String pageTitle = getUseCaseName(SnackBarUseCase());
 
