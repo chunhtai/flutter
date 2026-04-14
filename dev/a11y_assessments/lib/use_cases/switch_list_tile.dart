@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../utils.dart';
 import 'use_cases.dart';
 
+
 class SwitchListTileUseCase extends UseCase {
   SwitchListTileUseCase() : super(useCaseCategory: UseCaseCategory.core);
 
