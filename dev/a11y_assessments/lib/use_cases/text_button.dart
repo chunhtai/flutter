@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../utils.dart';
 import 'use_cases.dart';
 
+
 class TextButtonUseCase extends UseCase {
   TextButtonUseCase() : super(useCaseCategory: UseCaseCategory.core);
 
