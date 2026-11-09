@@ -726,7 +726,7 @@ void main() {
               controller: scrollController,
               viewportBuilder: (BuildContext context, ViewportOffset offset) {
                 return Viewport(
-                  cacheExtent: 0.0,
+                  scrollCacheExtent: const ScrollCacheExtent.pixels(0.0),
                   offset: offset,
                   center: center,
                   slivers: children,

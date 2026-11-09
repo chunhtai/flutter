@@ -3289,8 +3289,8 @@ void main() {
                 return DefaultTextStyle(
                   style: const TextStyle(fontSize: 10),
                   child: ListView(
+                    scrollCacheExtent: const ScrollCacheExtent.pixels(0),
                     controller: controller,
-                    cacheExtent: 0,
                     addAutomaticKeepAlives: false,
                     addRepaintBoundaries: false,
                     addSemanticIndexes: false,

@@ -14,7 +14,7 @@ void main() {
       Directionality(
         textDirection: TextDirection.ltr,
         child: ListView(
-          cacheExtent: 0.0,
+          scrollCacheExtent: const ScrollCacheExtent.pixels(0.0),
           controller: controller,
           children: const <Widget>[
             SizedBox(height: 400.0, child: Text('1')),
@@ -37,7 +37,7 @@ void main() {
       Directionality(
         textDirection: TextDirection.ltr,
         child: ListView(
-          cacheExtent: 0.0,
+          scrollCacheExtent: const ScrollCacheExtent.pixels(0.0),
           controller: controller,
           children: const <Widget>[
             SizedBox(height: 200.0, child: Text('1')),

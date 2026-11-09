@@ -11,8 +11,8 @@ void main() {
     await tester.pumpWidget(
       TestHarness(
         child: CustomScrollView(
+          scrollCacheExtent: const ScrollCacheExtent.pixels(0),
           restorationId: 'list',
-          cacheExtent: 0,
           slivers: <Widget>[
             SliverList.builder(
               itemCount: 50,
@@ -32,8 +32,8 @@ void main() {
     await tester.pumpWidget(
       TestHarness(
         child: ListView(
+          scrollCacheExtent: const ScrollCacheExtent.pixels(0),
           restorationId: 'list',
-          cacheExtent: 0,
           children: List<Widget>.generate(
             50,
             (int index) => SizedBox(height: 50, child: Text('Tile $index')),
@@ -49,8 +49,8 @@ void main() {
     await tester.pumpWidget(
       TestHarness(
         child: ListView.builder(
+          scrollCacheExtent: const ScrollCacheExtent.pixels(0),
           restorationId: 'list',
-          cacheExtent: 0,
           itemBuilder: (BuildContext context, int index) =>
               SizedBox(height: 50, child: Text('Tile $index')),
         ),
@@ -64,8 +64,8 @@ void main() {
     await tester.pumpWidget(
       TestHarness(
         child: ListView.separated(
+          scrollCacheExtent: const ScrollCacheExtent.pixels(0),
           restorationId: 'list',
-          cacheExtent: 0,
           itemCount: 50,
           separatorBuilder: (BuildContext context, int index) => const SizedBox.shrink(),
           itemBuilder: (BuildContext context, int index) =>
@@ -81,8 +81,8 @@ void main() {
     await tester.pumpWidget(
       TestHarness(
         child: ListView.custom(
+          scrollCacheExtent: const ScrollCacheExtent.pixels(0),
           restorationId: 'list',
-          cacheExtent: 0,
           childrenDelegate: SliverChildListDelegate(
             List<Widget>.generate(
               50,
@@ -100,8 +100,8 @@ void main() {
     await tester.pumpWidget(
       TestHarness(
         child: GridView(
+          scrollCacheExtent: const ScrollCacheExtent.pixels(0),
           restorationId: 'grid',
-          cacheExtent: 0,
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 1),
           children: List<Widget>.generate(
             50,
@@ -118,8 +118,8 @@ void main() {
     await tester.pumpWidget(
       TestHarness(
         child: GridView.builder(
+          scrollCacheExtent: const ScrollCacheExtent.pixels(0),
           restorationId: 'grid',
-          cacheExtent: 0,
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 1),
           itemBuilder: (BuildContext context, int index) =>
               SizedBox(height: 50, child: Text('Tile $index')),
@@ -134,8 +134,8 @@ void main() {
     await tester.pumpWidget(
       TestHarness(
         child: GridView.custom(
+          scrollCacheExtent: const ScrollCacheExtent.pixels(0),
           restorationId: 'grid',
-          cacheExtent: 0,
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 1),
           childrenDelegate: SliverChildListDelegate(
             List<Widget>.generate(
@@ -154,8 +154,8 @@ void main() {
     await tester.pumpWidget(
       TestHarness(
         child: GridView.count(
+          scrollCacheExtent: const ScrollCacheExtent.pixels(0),
           restorationId: 'grid',
-          cacheExtent: 0,
           crossAxisCount: 1,
           children: List<Widget>.generate(
             50,
@@ -172,8 +172,8 @@ void main() {
     await tester.pumpWidget(
       TestHarness(
         child: GridView.extent(
+          scrollCacheExtent: const ScrollCacheExtent.pixels(0),
           restorationId: 'grid',
-          cacheExtent: 0,
           maxCrossAxisExtent: 50,
           children: List<Widget>.generate(
             50,
@@ -326,8 +326,8 @@ void main() {
             ];
           },
           body: ListView(
+            scrollCacheExtent: const ScrollCacheExtent.pixels(0),
             restorationId: 'inner',
-            cacheExtent: 0,
             children: List<Widget>.generate(
               50,
               (int index) => SizedBox(height: 50, child: Text('Tile $index')),
@@ -390,8 +390,8 @@ void main() {
     await tester.pumpWidget(
       TestHarness(
         child: ListView(
+          scrollCacheExtent: const ScrollCacheExtent.pixels(0),
           restorationId: 'list',
-          cacheExtent: 0,
           children: List<Widget>.generate(
             50,
             (int index) => SizedBox(height: 50, child: Text('Tile $index')),

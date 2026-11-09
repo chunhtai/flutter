@@ -2073,7 +2073,7 @@ void main() {
           child: SizedBox(
             height: 300.0,
             child: CustomScrollView(
-              cacheExtent: 0,
+              scrollCacheExtent: const ScrollCacheExtent.pixels(0),
               controller: outerController,
               slivers: <Widget>[
                 SliverToBoxAdapter(

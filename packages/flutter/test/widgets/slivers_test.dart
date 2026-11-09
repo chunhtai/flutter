@@ -652,8 +652,8 @@ void main() {
         Directionality(
           textDirection: TextDirection.ltr,
           child: CustomScrollView(
+            scrollCacheExtent: const ScrollCacheExtent.pixels(0),
             controller: controller,
-            cacheExtent: 0,
             slivers: <Widget>[
               SliverFixedExtentList.builder(
                 itemExtent: 200,
@@ -702,8 +702,8 @@ void main() {
         Directionality(
           textDirection: TextDirection.ltr,
           child: CustomScrollView(
+            scrollCacheExtent: const ScrollCacheExtent.pixels(0),
             controller: controller,
-            cacheExtent: 0,
             slivers: <Widget>[
               SliverFixedExtentList.builder(
                 itemExtent: 200,

@@ -65,22 +65,11 @@ class Viewport extends MultiChildRenderObjectWidget {
     this.anchor = 0.0,
     required this.offset,
     this.center,
-    @Deprecated(
-      'Use scrollCacheExtent instead. '
-      'This feature was deprecated after v3.41.0-0.0.pre.',
-    )
-    this.cacheExtent,
-    @Deprecated(
-      'Use scrollCacheExtent instead. '
-      'This feature was deprecated after v3.41.0-0.0.pre.',
-    )
-    this.cacheExtentStyle = CacheExtentStyle.pixel,
     this.scrollCacheExtent,
     this.paintOrder = SliverPaintOrder.firstIsTop,
     this.clipBehavior = Clip.hardEdge,
     List<Widget> slivers = const <Widget>[],
   }) : assert(center == null || slivers.where((Widget child) => child.key == center).length == 1),
-       assert(cacheExtentStyle != CacheExtentStyle.viewport || cacheExtent != null),
        super(children: slivers);
 
   /// The direction in which the [offset]'s [ViewportOffset.pixels] increases.
@@ -133,24 +122,6 @@ class Viewport extends MultiChildRenderObjectWidget {
   /// {@macro flutter.rendering.GrowthDirection.sample}
   final Key? center;
 
-  /// {@macro flutter.rendering.RenderViewportBase.cacheExtent}
-  ///
-  /// See also:
-  ///
-  ///  * [cacheExtentStyle], which controls the units of the [cacheExtent].
-  @Deprecated(
-    'Use scrollCacheExtent instead. '
-    'This feature was deprecated after v3.41.0-0.0.pre.',
-  )
-  final double? cacheExtent;
-
-  /// {@macro flutter.rendering.RenderViewportBase.cacheExtentStyle}
-  @Deprecated(
-    'Use scrollCacheExtent instead. '
-    'This feature was deprecated after v3.41.0-0.0.pre.',
-  )
-  final CacheExtentStyle cacheExtentStyle;
-
   /// {@macro flutter.rendering.RenderViewportBase.scrollCacheExtent}
   final ScrollCacheExtent? scrollCacheExtent;
 
@@ -163,21 +134,6 @@ class Viewport extends MultiChildRenderObjectWidget {
   ///
   /// Defaults to [Clip.hardEdge].
   final Clip clipBehavior;
-
-  ScrollCacheExtent? get _effectiveScrollCacheExtent {
-    if (scrollCacheExtent != null) {
-      return scrollCacheExtent;
-    }
-    if (cacheExtent != null) {
-      switch (cacheExtentStyle) {
-        case CacheExtentStyle.pixel:
-          return ScrollCacheExtent.pixels(cacheExtent!);
-        case CacheExtentStyle.viewport:
-          return ScrollCacheExtent.viewport(cacheExtent!);
-      }
-    }
-    return null;
-  }
 
   /// Given a [BuildContext] and an [AxisDirection], determine the correct cross
   /// axis direction.
@@ -223,7 +179,7 @@ class Viewport extends MultiChildRenderObjectWidget {
           crossAxisDirection ?? Viewport.getDefaultCrossAxisDirection(context, axisDirection),
       anchor: anchor,
       offset: offset,
-      scrollCacheExtent: _effectiveScrollCacheExtent,
+      scrollCacheExtent: scrollCacheExtent,
       paintOrder: paintOrder,
       clipBehavior: clipBehavior,
     );
@@ -237,7 +193,7 @@ class Viewport extends MultiChildRenderObjectWidget {
           crossAxisDirection ?? Viewport.getDefaultCrossAxisDirection(context, axisDirection)
       ..anchor = anchor
       ..offset = offset
-      ..scrollCacheExtent = _effectiveScrollCacheExtent
+      ..scrollCacheExtent = scrollCacheExtent
       ..paintOrder = paintOrder
       ..clipBehavior = clipBehavior;
   }
@@ -394,16 +350,6 @@ class ShrinkWrappingViewport extends MultiChildRenderObjectWidget {
     required this.offset,
     this.paintOrder = SliverPaintOrder.firstIsTop,
     this.clipBehavior = Clip.hardEdge,
-    @Deprecated(
-      'Use scrollCacheExtent instead. '
-      'This feature was deprecated after v3.41.0-0.0.pre.',
-    )
-    this.cacheExtent,
-    @Deprecated(
-      'Use scrollCacheExtent instead. '
-      'This feature was deprecated after v3.41.0-0.0.pre.',
-    )
-    this.cacheExtentStyle = CacheExtentStyle.pixel,
     this.scrollCacheExtent,
     List<Widget> slivers = const <Widget>[],
   }) : super(children: slivers);
@@ -446,41 +392,8 @@ class ShrinkWrappingViewport extends MultiChildRenderObjectWidget {
   /// Defaults to [Clip.hardEdge].
   final Clip clipBehavior;
 
-  /// {@macro flutter.rendering.RenderViewportBase.cacheExtent}
-  ///
-  /// See also:
-  ///
-  ///  * [cacheExtentStyle], which controls the units of the [cacheExtent].
-  @Deprecated(
-    'Use scrollCacheExtent instead. '
-    'This feature was deprecated after v3.41.0-0.0.pre.',
-  )
-  final double? cacheExtent;
-
-  /// {@macro flutter.rendering.RenderViewportBase.cacheExtentStyle}
-  @Deprecated(
-    'Use scrollCacheExtent instead. '
-    'This feature was deprecated after v3.41.0-0.0.pre.',
-  )
-  final CacheExtentStyle cacheExtentStyle;
-
   /// {@macro flutter.rendering.RenderViewportBase.scrollCacheExtent}
   final ScrollCacheExtent? scrollCacheExtent;
-
-  ScrollCacheExtent? get _effectiveScrollCacheExtent {
-    if (scrollCacheExtent != null) {
-      return scrollCacheExtent;
-    }
-    if (cacheExtent != null) {
-      switch (cacheExtentStyle) {
-        case CacheExtentStyle.pixel:
-          return ScrollCacheExtent.pixels(cacheExtent!);
-        case CacheExtentStyle.viewport:
-          return ScrollCacheExtent.viewport(cacheExtent!);
-      }
-    }
-    return null;
-  }
 
   @override
   RenderShrinkWrappingViewport createRenderObject(BuildContext context) {
@@ -491,7 +404,7 @@ class ShrinkWrappingViewport extends MultiChildRenderObjectWidget {
       offset: offset,
       paintOrder: paintOrder,
       clipBehavior: clipBehavior,
-      scrollCacheExtent: _effectiveScrollCacheExtent,
+      scrollCacheExtent: scrollCacheExtent,
     );
   }
 
@@ -504,7 +417,7 @@ class ShrinkWrappingViewport extends MultiChildRenderObjectWidget {
       ..offset = offset
       ..paintOrder = paintOrder
       ..clipBehavior = clipBehavior
-      ..scrollCacheExtent = _effectiveScrollCacheExtent;
+      ..scrollCacheExtent = scrollCacheExtent;
   }
 
   @override

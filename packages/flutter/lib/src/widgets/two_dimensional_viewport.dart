@@ -147,16 +147,6 @@ abstract class TwoDimensionalViewport extends RenderObjectWidget {
     required this.horizontalAxisDirection,
     required this.delegate,
     required this.mainAxis,
-    @Deprecated(
-      'Use scrollCacheExtent instead. '
-      'This feature was deprecated after v3.41.0-0.0.pre.',
-    )
-    this.cacheExtent,
-    @Deprecated(
-      'Use scrollCacheExtent instead. '
-      'This feature was deprecated after v3.41.0-0.0.pre.',
-    )
-    this.cacheExtentStyle,
     this.scrollCacheExtent,
     this.clipBehavior = Clip.hardEdge,
   }) : assert(
@@ -220,20 +210,6 @@ abstract class TwoDimensionalViewport extends RenderObjectWidget {
   /// order, according to their associated [ChildVicinity]. When the main axis
   /// is [Axis.horizontal], the children will be painted in column major order.
   final Axis mainAxis;
-
-  /// {@macro flutter.rendering.RenderViewportBase.cacheExtent}
-  @Deprecated(
-    'Use scrollCacheExtent instead. '
-    'This feature was deprecated after v3.41.0-0.0.pre.',
-  )
-  final double? cacheExtent;
-
-  /// {@macro flutter.rendering.RenderViewportBase.cacheExtentStyle}
-  @Deprecated(
-    'Use scrollCacheExtent instead. '
-    'This feature was deprecated after v3.41.0-0.0.pre.',
-  )
-  final CacheExtentStyle? cacheExtentStyle;
 
   /// {@macro flutter.rendering.RenderViewportBase.scrollCacheExtent}
   final ScrollCacheExtent? scrollCacheExtent;
@@ -449,7 +425,7 @@ class TwoDimensionalViewportParentData extends ParentData with KeepAliveParentDa
   /// Whether or not the child is actually visible within the viewport.
   ///
   /// For example, if a child is contained within the
-  /// [RenderTwoDimensionalViewport.cacheExtent] and out of view.
+  /// [RenderTwoDimensionalViewport.scrollCacheExtent] and out of view.
   ///
   /// This is used during [RenderTwoDimensionalViewport.paint] in order to skip
   /// painting children that cannot be seen.
@@ -532,8 +508,8 @@ class TwoDimensionalViewportParentData extends ParentData with KeepAliveParentDa
 abstract class RenderTwoDimensionalViewport extends RenderBox implements RenderAbstractViewport {
   /// Initializes fields for subclasses.
   ///
-  /// The [cacheExtent], if null, defaults to
-  /// [RenderAbstractViewport.defaultCacheExtent].
+  /// The [scrollCacheExtent], if null, defaults to
+  /// [RenderAbstractViewport.defaultCacheExtent] pixels.
   RenderTwoDimensionalViewport({
     required this._horizontalOffset,
     required AxisDirection horizontalAxisDirection,
@@ -542,16 +518,6 @@ abstract class RenderTwoDimensionalViewport extends RenderBox implements RenderA
     required this._delegate,
     required this._mainAxis,
     required this._childManager,
-    @Deprecated(
-      'Use scrollCacheExtent instead. '
-      'This feature was deprecated after v3.41.0-0.0.pre.',
-    )
-    double? cacheExtent,
-    @Deprecated(
-      'Use scrollCacheExtent instead. '
-      'This feature was deprecated after v3.41.0-0.0.pre.',
-    )
-    CacheExtentStyle? cacheExtentStyle,
     ScrollCacheExtent? scrollCacheExtent,
     this._clipBehavior = Clip.hardEdge,
   }) : assert(
@@ -567,12 +533,7 @@ abstract class RenderTwoDimensionalViewport extends RenderBox implements RenderA
        _verticalAxisDirection = verticalAxisDirection,
        _scrollCacheExtent =
            scrollCacheExtent ??
-           (cacheExtent != null
-               ? switch (cacheExtentStyle) {
-                   CacheExtentStyle.pixel || null => ScrollCacheExtent.pixels(cacheExtent),
-                   CacheExtentStyle.viewport => ScrollCacheExtent.viewport(cacheExtent),
-                 }
-               : const ScrollCacheExtent.pixels(RenderAbstractViewport.defaultCacheExtent)) {
+           const ScrollCacheExtent.pixels(RenderAbstractViewport.defaultCacheExtent) {
     assert(() {
       _debugDanglingKeepAlives = <RenderBox>[];
       return true;
@@ -697,58 +658,6 @@ abstract class RenderTwoDimensionalViewport extends RenderBox implements RenderA
     }
     _mainAxis = value;
     // Child order needs to be resorted, which happens in performLayout.
-    markNeedsLayout();
-  }
-
-  /// {@macro flutter.rendering.RenderViewportBase.cacheExtent}
-  @Deprecated(
-    'Use scrollCacheExtent instead. '
-    'This feature was deprecated after v3.41.0-0.0.pre.',
-  )
-  double get cacheExtent => _scrollCacheExtent.value;
-  @Deprecated(
-    'Use scrollCacheExtent instead. '
-    'This feature was deprecated after v3.41.0-0.0.pre.',
-  )
-  set cacheExtent(double? value) {
-    if (value == cacheExtent) {
-      return;
-    }
-    if (value == null) {
-      _scrollCacheExtent = const ScrollCacheExtent.pixels(
-        RenderAbstractViewport.defaultCacheExtent,
-      );
-    } else {
-      _scrollCacheExtent = switch (cacheExtentStyle) {
-        CacheExtentStyle.pixel => ScrollCacheExtent.pixels(value),
-        CacheExtentStyle.viewport => ScrollCacheExtent.viewport(value),
-      };
-    }
-    markNeedsLayout();
-  }
-
-  /// {@macro flutter.rendering.RenderViewportBase.cacheExtentStyle}
-  @Deprecated(
-    'Use scrollCacheExtent instead. '
-    'This feature was deprecated after v3.41.0-0.0.pre.',
-  )
-  CacheExtentStyle get cacheExtentStyle => _scrollCacheExtent.style;
-  @Deprecated(
-    'Use scrollCacheExtent instead. '
-    'This feature was deprecated after v3.41.0-0.0.pre.',
-  )
-  set cacheExtentStyle(CacheExtentStyle? value) {
-    if (value == cacheExtentStyle) {
-      return;
-    }
-    if (value == null) {
-      _scrollCacheExtent = ScrollCacheExtent.pixels(cacheExtent);
-    } else {
-      _scrollCacheExtent = switch (value) {
-        CacheExtentStyle.pixel => ScrollCacheExtent.pixels(cacheExtent),
-        CacheExtentStyle.viewport => ScrollCacheExtent.viewport(cacheExtent),
-      };
-    }
     markNeedsLayout();
   }
 
@@ -1477,7 +1386,7 @@ abstract class RenderTwoDimensionalViewport extends RenderBox implements RenderA
   ///
   /// Children for the given [ChildVicinity] will be inserted into the active
   /// children list, and so should be visible, or contained within the
-  /// [cacheExtent].
+  /// [scrollCacheExtent].
   RenderBox? buildOrObtainChildFor(ChildVicinity vicinity) {
     assert(vicinity != ChildVicinity.invalid);
     // This should only be called during layout.
@@ -1539,7 +1448,7 @@ abstract class RenderTwoDimensionalViewport extends RenderBox implements RenderA
 
   /// Computes the portion of the child that is visible, assuming that only the
   /// region from the [ViewportOffset.pixels] of both dimensions to the
-  /// [cacheExtent] is visible, and that the relationship between scroll offsets
+  /// [scrollCacheExtent] is visible, and that the relationship between scroll offsets
   /// and paint offsets is linear.
   ///
   /// For example, if the [ViewportOffset]s each have a scroll offset of 100 and

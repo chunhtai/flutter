@@ -1461,7 +1461,7 @@ Future<void> main() async {
       builder: (BuildContext context) {
         return Material(
           child: ListView(
-            cacheExtent: 0.0,
+            scrollCacheExtent: const ScrollCacheExtent.pixels(0.0),
             children: <Widget>[
               const SizedBox(height: 100.0),
               // This container will appear at Y=100

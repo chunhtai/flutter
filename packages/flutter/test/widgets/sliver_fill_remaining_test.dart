@@ -159,7 +159,7 @@ void main() {
             Directionality(
               textDirection: TextDirection.ltr,
               child: CustomScrollView(
-                cacheExtent: cacheExtent,
+                scrollCacheExtent: const ScrollCacheExtent.pixels(cacheExtent),
                 slivers: <Widget>[
                   SliverToBoxAdapter(
                     child: Container(color: _debugRed, height: viewportHeight - 100, width: 150),
@@ -193,7 +193,7 @@ void main() {
             Directionality(
               textDirection: TextDirection.ltr,
               child: CustomScrollView(
-                cacheExtent: cacheExtent,
+                scrollCacheExtent: const ScrollCacheExtent.pixels(cacheExtent),
                 slivers: <Widget>[
                   // This sliver takes up entire viewport and leaves 250 remaining cacheExtent
                   SliverToBoxAdapter(
@@ -227,7 +227,7 @@ void main() {
             Directionality(
               textDirection: TextDirection.ltr,
               child: CustomScrollView(
-                cacheExtent: cacheExtent,
+                scrollCacheExtent: const ScrollCacheExtent.pixels(cacheExtent),
                 slivers: <Widget>[
                   // This sliver takes up entire viewport and leaves 0 remaining cacheExtent
                   SliverToBoxAdapter(
@@ -451,7 +451,7 @@ void main() {
             Directionality(
               textDirection: TextDirection.ltr,
               child: CustomScrollView(
-                cacheExtent: cacheExtent,
+                scrollCacheExtent: const ScrollCacheExtent.pixels(cacheExtent),
                 slivers: <Widget>[
                   SliverToBoxAdapter(
                     child: Container(color: _debugRed, height: viewportHeight - 100, width: 150),
@@ -486,7 +486,7 @@ void main() {
             Directionality(
               textDirection: TextDirection.ltr,
               child: CustomScrollView(
-                cacheExtent: cacheExtent,
+                scrollCacheExtent: const ScrollCacheExtent.pixels(cacheExtent),
                 slivers: <Widget>[
                   // This sliver takes up entire viewport and leaves 250 remaining cacheExtent
                   SliverToBoxAdapter(
@@ -521,7 +521,7 @@ void main() {
             Directionality(
               textDirection: TextDirection.ltr,
               child: CustomScrollView(
-                cacheExtent: cacheExtent,
+                scrollCacheExtent: const ScrollCacheExtent.pixels(cacheExtent),
                 slivers: <Widget>[
                   // This sliver takes up entire viewport and leaves 0 remaining cacheExtent
                   SliverToBoxAdapter(
@@ -1043,7 +1043,7 @@ void main() {
                 Directionality(
                   textDirection: TextDirection.ltr,
                   child: CustomScrollView(
-                    cacheExtent: cacheExtent,
+                    scrollCacheExtent: const ScrollCacheExtent.pixels(cacheExtent),
                     slivers: <Widget>[
                       SliverToBoxAdapter(
                         child: Container(
@@ -1090,7 +1090,7 @@ void main() {
                 Directionality(
                   textDirection: TextDirection.ltr,
                   child: CustomScrollView(
-                    cacheExtent: cacheExtent,
+                    scrollCacheExtent: const ScrollCacheExtent.pixels(cacheExtent),
                     slivers: <Widget>[
                       // This sliver takes up entire viewport and leaves 250 remaining cacheExtent
                       SliverToBoxAdapter(
@@ -1133,7 +1133,7 @@ void main() {
                 Directionality(
                   textDirection: TextDirection.ltr,
                   child: CustomScrollView(
-                    cacheExtent: cacheExtent,
+                    scrollCacheExtent: const ScrollCacheExtent.pixels(cacheExtent),
                     slivers: <Widget>[
                       // This sliver takes up entire viewport and leaves 0 remaining cacheExtent
                       SliverToBoxAdapter(

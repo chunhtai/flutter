@@ -436,7 +436,7 @@ class _SwitchingChildBuilderTest extends State<SwitchingChildBuilderTest> {
         child: SizedBox(
           height: 100,
           child: CustomScrollView(
-            cacheExtent: 0,
+            scrollCacheExtent: const ScrollCacheExtent.pixels(0),
             slivers: <Widget>[
               SliverFillViewport(
                 delegate: SliverChildBuilderDelegate(
@@ -469,7 +469,7 @@ class SwitchingChildListTest extends StatelessWidget {
         child: SizedBox(
           height: 100,
           child: CustomScrollView(
-            cacheExtent: 0,
+            scrollCacheExtent: const ScrollCacheExtent.pixels(0),
             slivers: <Widget>[
               SliverFillViewport(
                 viewportFraction: viewportFraction,
@@ -496,7 +496,7 @@ class SwitchingSliverListTest extends StatelessWidget {
         child: SizedBox(
           height: 100,
           child: CustomScrollView(
-            cacheExtent: 0,
+            scrollCacheExtent: const ScrollCacheExtent.pixels(0),
             slivers: <Widget>[SliverList.list(children: children)],
           ),
         ),

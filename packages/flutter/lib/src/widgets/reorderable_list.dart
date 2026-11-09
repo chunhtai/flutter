@@ -167,11 +167,6 @@ class ReorderableList extends StatefulWidget {
     this.physics,
     this.shrinkWrap = false,
     this.anchor = 0.0,
-    @Deprecated(
-      'Use scrollCacheExtent instead. '
-      'This feature was deprecated after v3.41.0-0.0.pre.',
-    )
-    this.cacheExtent,
     this.scrollCacheExtent,
     this.dragStartBehavior = DragStartBehavior.start,
     this.keyboardDismissBehavior,
@@ -325,13 +320,6 @@ class ReorderableList extends StatefulWidget {
   /// {@macro flutter.widgets.scroll_view.anchor}
   final double anchor;
 
-  /// {@macro flutter.rendering.RenderViewportBase.cacheExtent}
-  @Deprecated(
-    'Use scrollCacheExtent instead. '
-    'This feature was deprecated after v3.41.0-0.0.pre.',
-  )
-  final double? cacheExtent;
-
   /// {@macro flutter.rendering.RenderViewportBase.scrollCacheExtent}
   final ScrollCacheExtent? scrollCacheExtent;
 
@@ -462,17 +450,6 @@ class ReorderableList extends StatefulWidget {
 class ReorderableListState extends State<ReorderableList> {
   final GlobalKey<SliverReorderableListState> _sliverReorderableListKey = GlobalKey();
 
-  ScrollCacheExtent? get _effectiveScrollCacheExtent {
-    if (widget.scrollCacheExtent != null) {
-      return widget.scrollCacheExtent;
-    }
-
-    if (widget.cacheExtent != null) {
-      return ScrollCacheExtent.pixels(widget.cacheExtent!);
-    }
-    return null;
-  }
-
   /// Initiate the dragging of the item at [index] that was started with
   /// the pointer down [event].
   ///
@@ -519,7 +496,7 @@ class ReorderableListState extends State<ReorderableList> {
       physics: widget.physics,
       shrinkWrap: widget.shrinkWrap,
       anchor: widget.anchor,
-      scrollCacheExtent: _effectiveScrollCacheExtent,
+      scrollCacheExtent: widget.scrollCacheExtent,
       dragStartBehavior: widget.dragStartBehavior,
       keyboardDismissBehavior: widget.keyboardDismissBehavior,
       restorationId: widget.restorationId,

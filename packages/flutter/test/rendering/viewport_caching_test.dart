@@ -41,9 +41,9 @@ void main() {
 
   test('Cache extent - 0, pixels', () async {
     final renderViewport = RenderViewport(
+      scrollCacheExtent: const ScrollCacheExtent.pixels(0.0),
       crossAxisDirection: AxisDirection.left,
       offset: ViewportOffset.zero(),
-      cacheExtent: 0.0,
       children: children,
     );
     layout(renderViewport, phase: EnginePhase.flushSemantics);
@@ -52,33 +52,20 @@ void main() {
 
   test('Cache extent - 500, pixels', () async {
     final renderViewport = RenderViewport(
+      scrollCacheExtent: const ScrollCacheExtent.pixels(500.0),
       crossAxisDirection: AxisDirection.left,
       offset: ViewportOffset.zero(),
-      cacheExtent: 500.0,
       children: children,
     );
     layout(renderViewport, phase: EnginePhase.flushSemantics);
     expect(renderViewport.describeSemanticsClip(null), rectExpandedOnAxis(500.0));
   });
 
-  test('Cache extent - nullx viewport', () async {
-    await expectLater(
-      () => RenderViewport(
-        crossAxisDirection: AxisDirection.left,
-        offset: ViewportOffset.zero(),
-        cacheExtentStyle: CacheExtentStyle.viewport,
-        children: children,
-      ),
-      throwsAssertionError,
-    );
-  });
-
   test('Cache extent - 0x viewport', () async {
     final renderViewport = RenderViewport(
+      scrollCacheExtent: const ScrollCacheExtent.viewport(0.0),
       crossAxisDirection: AxisDirection.left,
       offset: ViewportOffset.zero(),
-      cacheExtent: 0.0,
-      cacheExtentStyle: CacheExtentStyle.viewport,
       children: children,
     );
 
@@ -88,10 +75,9 @@ void main() {
 
   test('Cache extent - .5x viewport', () async {
     final renderViewport = RenderViewport(
+      scrollCacheExtent: const ScrollCacheExtent.viewport(.5),
       crossAxisDirection: AxisDirection.left,
       offset: ViewportOffset.zero(),
-      cacheExtent: .5,
-      cacheExtentStyle: CacheExtentStyle.viewport,
       children: children,
     );
 
@@ -101,10 +87,9 @@ void main() {
 
   test('Cache extent - 1x viewport', () async {
     final renderViewport = RenderViewport(
+      scrollCacheExtent: const ScrollCacheExtent.viewport(1.0),
       crossAxisDirection: AxisDirection.left,
       offset: ViewportOffset.zero(),
-      cacheExtent: 1.0,
-      cacheExtentStyle: CacheExtentStyle.viewport,
       children: children,
     );
 
@@ -114,10 +99,9 @@ void main() {
 
   test('Cache extent - 2.5x viewport', () async {
     final renderViewport = RenderViewport(
+      scrollCacheExtent: const ScrollCacheExtent.viewport(2.5),
       crossAxisDirection: AxisDirection.left,
       offset: ViewportOffset.zero(),
-      cacheExtent: 2.5,
-      cacheExtentStyle: CacheExtentStyle.viewport,
       children: children,
     );
 

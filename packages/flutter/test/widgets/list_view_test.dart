@@ -529,7 +529,7 @@ void main() {
           child: SizedBox(
             height: 200.0,
             child: ListView(
-              cacheExtent: 500.0,
+              scrollCacheExtent: const ScrollCacheExtent.pixels(500.0),
               children: <Widget>[
                 Container(height: 90.0),
                 Container(height: 110.0),
@@ -767,7 +767,10 @@ void main() {
         child: Center(
           child: SizedBox(
             height: 200.0,
-            child: ListView(cacheExtent: 500.0, children: const <Widget>[SizedBox(height: 100.0)]),
+            child: ListView(
+              scrollCacheExtent: const ScrollCacheExtent.pixels(500.0),
+              children: const <Widget>[SizedBox(height: 100.0)],
+            ),
           ),
         ),
       ),
@@ -788,8 +791,8 @@ void main() {
           child: SizedBox(
             height: 200.0,
             child: ListView(
+              scrollCacheExtent: const ScrollCacheExtent.pixels(500.0),
               itemExtent: 100.0,
-              cacheExtent: 500.0,
               children: const <Widget>[
                 SizedBox(height: 100.0),
                 SizedBox(height: 100.0),
@@ -812,8 +815,8 @@ void main() {
           child: SizedBox(
             height: 200.0,
             child: ListView(
+              scrollCacheExtent: const ScrollCacheExtent.pixels(500.0),
               itemExtent: 100.0,
-              cacheExtent: 500.0,
               children: const <Widget>[SizedBox(height: 100.0)],
             ),
           ),

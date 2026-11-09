@@ -573,8 +573,8 @@ void main() {
       }) {
         return TestWidgetsApp(
           home: ListView(
+            scrollCacheExtent: const ScrollCacheExtent.pixels(1000),
             controller: scrollController,
-            cacheExtent: 1000,
             children: <Widget>[
               // The text field is not fully visible.
               const SizedBox(height: 599),

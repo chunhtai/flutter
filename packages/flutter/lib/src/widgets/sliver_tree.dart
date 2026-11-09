@@ -366,7 +366,7 @@ int _kDefaultSemanticIndexCallback(Widget _, int localIndex) => localIndex;
 ///
 /// The rows of the tree are laid out on demand by the [Viewport]'s render
 /// object, using [TreeSliver.treeNodeBuilder]. This will only be called for the
-/// nodes that are visible, or within the [Viewport.cacheExtent].
+/// nodes that are visible, or within the [Viewport.scrollCacheExtent].
 ///
 /// The [TreeSliver.treeNodeBuilder] returns the [Widget] that represents the
 /// given [TreeSliverNode].

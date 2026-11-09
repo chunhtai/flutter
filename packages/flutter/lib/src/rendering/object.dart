@@ -3791,7 +3791,7 @@ abstract class RenderObject with DiagnosticableTreeMixin implements HitTestTarge
   ///
   /// See also:
   ///
-  /// * [RenderViewportBase.cacheExtent], used by viewports to extend their
+  /// * [RenderViewportBase.scrollCacheExtent], used by viewports to extend their
   ///   semantics clip beyond their approximate paint clip.
   Rect? describeSemanticsClip(covariant RenderObject? child) => null;
 

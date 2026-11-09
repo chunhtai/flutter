@@ -6,7 +6,6 @@
 library;
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/src/gestures/monodrag.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -992,14 +991,13 @@ void main() {
       expect(tester.testTextInput.isVisible, isFalse);
     });
 
-    testWidgets('cacheExtentStyle is passed to viewport', (WidgetTester tester) async {
+    testWidgets('scrollCacheExtent is passed to viewport', (WidgetTester tester) async {
       late final TwoDimensionalChildBuilderDelegate delegate;
       addTearDown(() => delegate.dispose());
       await tester.pumpWidget(
         TestWidgetsApp(
           home: SimpleBuilderTableView(
-            cacheExtent: 1.0,
-            cacheExtentStyle: CacheExtentStyle.viewport,
+            scrollCacheExtent: const ScrollCacheExtent.viewport(1.0),
             delegate: delegate = TwoDimensionalChildBuilderDelegate(
               builder: _testChildBuilder,
               maxXIndex: 5,
@@ -1013,8 +1011,7 @@ void main() {
       final SimpleBuilderTableViewport viewport = tester.widget(
         find.byType(SimpleBuilderTableViewport),
       );
-      expect(viewport.cacheExtent, 1.0);
-      expect(viewport.cacheExtentStyle, CacheExtentStyle.viewport);
+      expect(viewport.scrollCacheExtent, const ScrollCacheExtent.viewport(1.0));
     });
   });
 }

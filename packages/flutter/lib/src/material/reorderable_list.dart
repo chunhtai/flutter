@@ -102,11 +102,6 @@ class ReorderableListView extends StatefulWidget {
     this.physics,
     this.shrinkWrap = false,
     this.anchor = 0.0,
-    @Deprecated(
-      'Use scrollCacheExtent instead. '
-      'This feature was deprecated after v3.41.0-0.0.pre.',
-    )
-    this.cacheExtent,
     this.scrollCacheExtent,
     this.dragStartBehavior = DragStartBehavior.start,
     this.keyboardDismissBehavior,
@@ -190,11 +185,6 @@ class ReorderableListView extends StatefulWidget {
     this.physics,
     this.shrinkWrap = false,
     this.anchor = 0.0,
-    @Deprecated(
-      'Use scrollCacheExtent instead. '
-      'This feature was deprecated after v3.41.0-0.0.pre.',
-    )
-    this.cacheExtent,
     this.scrollCacheExtent,
     this.dragStartBehavior = DragStartBehavior.start,
     this.keyboardDismissBehavior,
@@ -304,13 +294,6 @@ class ReorderableListView extends StatefulWidget {
 
   /// {@macro flutter.widgets.scroll_view.anchor}
   final double anchor;
-
-  /// {@macro flutter.rendering.RenderViewportBase.cacheExtent}
-  @Deprecated(
-    'Use scrollCacheExtent instead. '
-    'This feature was deprecated after v3.41.0-0.0.pre.',
-  )
-  final double? cacheExtent;
 
   /// {@macro flutter.rendering.RenderViewportBase.scrollCacheExtent}
   final ScrollCacheExtent? scrollCacheExtent;
@@ -497,10 +480,6 @@ class _ReorderableListViewState extends State<ReorderableListView> {
         ? (startPadding, endPadding)
         : (endPadding, startPadding);
 
-    final ScrollCacheExtent? scrollCacheExtent =
-        widget.scrollCacheExtent ??
-        (widget.cacheExtent == null ? null : ScrollCacheExtent.pixels(widget.cacheExtent!));
-
     return CustomScrollView(
       scrollDirection: widget.scrollDirection,
       reverse: widget.reverse,
@@ -509,7 +488,7 @@ class _ReorderableListViewState extends State<ReorderableListView> {
       physics: widget.physics,
       shrinkWrap: widget.shrinkWrap,
       anchor: widget.anchor,
-      scrollCacheExtent: scrollCacheExtent,
+      scrollCacheExtent: widget.scrollCacheExtent,
       dragStartBehavior: widget.dragStartBehavior,
       keyboardDismissBehavior: widget.keyboardDismissBehavior,
       restorationId: widget.restorationId,

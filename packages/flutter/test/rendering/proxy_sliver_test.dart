@@ -20,9 +20,9 @@ void main() {
     );
 
     final root = RenderViewport(
+      scrollCacheExtent: const ScrollCacheExtent.pixels(250.0),
       crossAxisDirection: AxisDirection.right,
       offset: ViewportOffset.zero(),
-      cacheExtent: 250.0,
       children: <RenderSliver>[renderSliverOpacity],
     );
 
@@ -38,9 +38,9 @@ void main() {
     );
 
     final root = RenderViewport(
+      scrollCacheExtent: const ScrollCacheExtent.pixels(250.0),
       crossAxisDirection: AxisDirection.right,
       offset: ViewportOffset.zero(),
-      cacheExtent: 250.0,
       children: <RenderSliver>[renderSliverOpacity],
     );
 
@@ -57,9 +57,9 @@ void main() {
     );
 
     final root = RenderViewport(
+      scrollCacheExtent: const ScrollCacheExtent.pixels(250.0),
       crossAxisDirection: AxisDirection.right,
       offset: ViewportOffset.zero(),
-      cacheExtent: 250.0,
       children: <RenderSliver>[renderSliverOpacity],
     );
 
@@ -88,9 +88,9 @@ void main() {
     );
 
     final root = RenderViewport(
+      scrollCacheExtent: const ScrollCacheExtent.pixels(250.0),
       crossAxisDirection: AxisDirection.right,
       offset: ViewportOffset.zero(),
-      cacheExtent: 250.0,
       children: <RenderSliver>[renderSliverAnimatedOpacity],
     );
 
@@ -110,9 +110,9 @@ void main() {
     );
 
     final root = RenderViewport(
+      scrollCacheExtent: const ScrollCacheExtent.pixels(250.0),
       crossAxisDirection: AxisDirection.right,
       offset: ViewportOffset.zero(),
-      cacheExtent: 250.0,
       children: <RenderSliver>[renderSliverAnimatedOpacity],
     );
 
@@ -132,9 +132,9 @@ void main() {
     );
 
     final root = RenderViewport(
+      scrollCacheExtent: const ScrollCacheExtent.pixels(250.0),
       crossAxisDirection: AxisDirection.right,
       offset: ViewportOffset.zero(),
-      cacheExtent: 250.0,
       children: <RenderSliver>[renderSliverAnimatedOpacity],
     );
 
@@ -154,9 +154,9 @@ void main() {
     );
 
     final root = RenderViewport(
+      scrollCacheExtent: const ScrollCacheExtent.pixels(250.0),
       crossAxisDirection: AxisDirection.right,
       offset: ViewportOffset.zero(),
-      cacheExtent: 250.0,
       children: <RenderSliver>[renderSliverAnimatedOpacity],
     );
 

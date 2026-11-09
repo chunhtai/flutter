@@ -507,7 +507,7 @@ void main() {
       return Directionality(
         textDirection: TextDirection.ltr,
         child: CustomScrollView(
-          cacheExtent: 0.0,
+          scrollCacheExtent: const ScrollCacheExtent.pixels(0.0),
           slivers: <Widget>[
             SliverPadding(
               padding: EdgeInsets.zero,

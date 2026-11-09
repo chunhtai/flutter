@@ -132,12 +132,12 @@ class _ViewportScrollCacheExtent extends ScrollCacheExtent {
   int get hashCode => value.hashCode;
 }
 
-/// The unit of measurement for a [Viewport.cacheExtent].
+/// The unit of measurement for a [ScrollCacheExtent].
 enum CacheExtentStyle {
-  /// Treat the [Viewport.cacheExtent] as logical pixels.
+  /// Treat the [ScrollCacheExtent.value] as logical pixels.
   pixel,
 
-  /// Treat the [Viewport.cacheExtent] as a multiplier of the main axis extent.
+  /// Treat the [ScrollCacheExtent.value] as a multiplier of the main axis extent.
   viewport,
 }
 
@@ -285,7 +285,7 @@ abstract interface class RenderAbstractViewport extends RenderObject {
   ///
   /// See also:
   ///
-  ///  * [RenderViewportBase.cacheExtent] for a definition of the cache extent.
+  ///  * [RenderViewportBase.scrollCacheExtent] for a definition of the cache extent.
   static const double defaultCacheExtent = 250.0;
 }
 
@@ -419,31 +419,15 @@ abstract class RenderViewportBase<ParentDataClass extends ContainerParentDataMix
     AxisDirection axisDirection = AxisDirection.down,
     required AxisDirection crossAxisDirection,
     required this._offset,
-    @Deprecated(
-      'Use scrollCacheExtent instead. '
-      'This feature was deprecated after v3.41.0-0.0.pre.',
-    )
-    double? cacheExtent,
-    @Deprecated(
-      'Use scrollCacheExtent instead. '
-      'This feature was deprecated after v3.41.0-0.0.pre.',
-    )
-    CacheExtentStyle cacheExtentStyle = CacheExtentStyle.pixel,
     ScrollCacheExtent? scrollCacheExtent,
     this._paintOrder = SliverPaintOrder.firstIsTop,
     this._clipBehavior = Clip.hardEdge,
   }) : assert(axisDirectionToAxis(axisDirection) != axisDirectionToAxis(crossAxisDirection)),
-       assert(cacheExtent != null || cacheExtentStyle == CacheExtentStyle.pixel),
        _axisDirection = axisDirection,
        _crossAxisDirection = crossAxisDirection,
        _scrollCacheExtent =
            scrollCacheExtent ??
-           switch (cacheExtentStyle) {
-             CacheExtentStyle.pixel => ScrollCacheExtent.pixels(
-               cacheExtent ?? RenderAbstractViewport.defaultCacheExtent,
-             ),
-             CacheExtentStyle.viewport => ScrollCacheExtent.viewport(cacheExtent!),
-           };
+           const ScrollCacheExtent.pixels(RenderAbstractViewport.defaultCacheExtent);
 
   /// Report the semantics of this node, for example for accessibility purposes.
   ///
@@ -541,36 +525,6 @@ abstract class RenderViewportBase<ParentDataClass extends ContainerParentDataMix
     markNeedsLayout();
   }
 
-  /// {@template flutter.rendering.RenderViewportBase.cacheExtent}
-  /// Deprecated. Use [scrollCacheExtent] instead.
-  /// {@endtemplate}
-  @Deprecated(
-    'Use scrollCacheExtent instead. '
-    'This feature was deprecated after v3.41.0-0.0.pre.',
-  )
-  double? get cacheExtent => _scrollCacheExtent.value;
-
-  @Deprecated(
-    'Use scrollCacheExtent instead. '
-    'This feature was deprecated after v3.41.0-0.0.pre.',
-  )
-  set cacheExtent(double? value) {
-    if (value == cacheExtent) {
-      return;
-    }
-    if (value == null) {
-      _scrollCacheExtent = const ScrollCacheExtent.pixels(
-        RenderAbstractViewport.defaultCacheExtent,
-      );
-    } else {
-      _scrollCacheExtent = switch (_scrollCacheExtent) {
-        _PixelScrollCacheExtent() => ScrollCacheExtent.pixels(value),
-        _ViewportScrollCacheExtent() => ScrollCacheExtent.viewport(value),
-      };
-    }
-    markNeedsLayout();
-  }
-
   /// {@template flutter.rendering.RenderViewportBase.scrollCacheExtent}
   /// The viewport has an area before and after the visible area to cache items
   /// that are about to become visible when the user scrolls.
@@ -616,30 +570,6 @@ abstract class RenderViewportBase<ParentDataClass extends ContainerParentDataMix
   /// of the viewport multiplied by the requested cache extent, which is still
   /// expressed in pixels.
   double? _calculatedCacheExtent;
-
-  /// {@template flutter.rendering.RenderViewportBase.cacheExtentStyle}
-  /// Deprecated. Use [scrollCacheExtent] instead.
-  /// {@endtemplate}
-  @Deprecated(
-    'Use scrollCacheExtent instead. '
-    'This feature was deprecated after v3.41.0-0.0.pre.',
-  )
-  CacheExtentStyle get cacheExtentStyle => _scrollCacheExtent.style;
-
-  @Deprecated(
-    'Use scrollCacheExtent instead. '
-    'This feature was deprecated after v3.41.0-0.0.pre.',
-  )
-  set cacheExtentStyle(CacheExtentStyle value) {
-    if (value == cacheExtentStyle) {
-      return;
-    }
-    _scrollCacheExtent = switch (value) {
-      CacheExtentStyle.pixel => ScrollCacheExtent.pixels(cacheExtent!),
-      CacheExtentStyle.viewport => ScrollCacheExtent.viewport(cacheExtent!),
-    };
-    markNeedsLayout();
-  }
 
   /// {@template flutter.rendering.RenderViewportBase.paintOrder}
   /// The order in which to paint the slivers;
@@ -1566,13 +1496,10 @@ class RenderViewport extends RenderViewportBase<SliverPhysicalContainerParentDat
     double anchor = 0.0,
     List<RenderSliver>? children,
     RenderSliver? center,
-    super.cacheExtent,
-    super.cacheExtentStyle,
     super.scrollCacheExtent,
     super.paintOrder,
     super.clipBehavior,
   }) : assert(anchor >= 0.0 && anchor <= 1.0),
-       assert(cacheExtentStyle != CacheExtentStyle.viewport || cacheExtent != null),
        _anchor = anchor,
        _center = center {
     addAll(children);

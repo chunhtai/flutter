@@ -52,7 +52,7 @@ void main() {
       Directionality(
         textDirection: TextDirection.ltr,
         child: ListView(
-          cacheExtent: 0.0,
+          scrollCacheExtent: const ScrollCacheExtent.pixels(0.0),
           addAutomaticKeepAlives: false,
           addRepaintBoundaries: false,
           addSemanticIndexes: false,
@@ -100,7 +100,7 @@ void main() {
       Directionality(
         textDirection: TextDirection.ltr,
         child: ListView(
-          cacheExtent: 0.0,
+          scrollCacheExtent: const ScrollCacheExtent.pixels(0.0),
           addAutomaticKeepAlives: false,
           addRepaintBoundaries: false,
           addSemanticIndexes: false,
@@ -149,7 +149,7 @@ void main() {
       Directionality(
         textDirection: TextDirection.ltr,
         child: GridView.count(
-          cacheExtent: 0.0,
+          scrollCacheExtent: const ScrollCacheExtent.pixels(0.0),
           addAutomaticKeepAlives: false,
           addRepaintBoundaries: false,
           addSemanticIndexes: false,

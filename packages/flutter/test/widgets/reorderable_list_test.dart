@@ -1879,8 +1879,9 @@ void main() {
             // The third one just appears on the screen
             final double itemSize = view.maxWidth / 2 - 20;
             return CustomScrollView(
-              scrollDirection: Axis.horizontal,
-              cacheExtent: 0, // The fourth one will not be created in the initial state.
+              scrollCacheExtent: const ScrollCacheExtent.pixels(0),
+              scrollDirection:
+                  Axis.horizontal, // The fourth one will not be created in the initial state.
               slivers: <Widget>[
                 SliverReorderableList(
                   itemBuilder: (BuildContext context, int index) {

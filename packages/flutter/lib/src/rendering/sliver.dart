@@ -416,7 +416,7 @@ class SliverConstraints extends Constraints {
   ///
   /// See also:
   ///
-  ///  * [RenderViewport.cacheExtent] for a description of a viewport's cache area.
+  ///  * [RenderViewport.scrollCacheExtent] for a description of a viewport's cache area.
   final double cacheOrigin;
 
   /// Describes how much content the sliver should provide starting from the
@@ -435,7 +435,7 @@ class SliverConstraints extends Constraints {
   ///
   /// See also:
   ///
-  ///  * [RenderViewport.cacheExtent] for a description of a viewport's cache area.
+  ///  * [RenderViewport.scrollCacheExtent] for a description of a viewport's cache area.
   final double remainingCacheExtent;
 
   /// The axis along which the [scrollOffset] and [remainingPaintExtent] are measured.
@@ -839,7 +839,7 @@ class SliverGeometry with Diagnosticable {
   ///
   /// See also:
   ///
-  ///  * [RenderViewport.cacheExtent] for a description of a viewport's cache area.
+  ///  * [RenderViewport.scrollCacheExtent] for a description of a viewport's cache area.
   final double cacheExtent;
 
   /// The amount of space allocated to the cross axis.

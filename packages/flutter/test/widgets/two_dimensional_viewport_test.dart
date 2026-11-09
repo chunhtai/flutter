@@ -1732,7 +1732,10 @@ void main() {
       addTearDown(renderViewport.dispose);
 
       expect(renderViewport.clipBehavior, Clip.hardEdge);
-      expect(renderViewport.cacheExtent, RenderAbstractViewport.defaultCacheExtent);
+      expect(
+        renderViewport.scrollCacheExtent,
+        const ScrollCacheExtent.pixels(RenderAbstractViewport.defaultCacheExtent),
+      );
       expect(renderViewport.isRepaintBoundary, isTrue);
       expect(renderViewport.sizedByParent, isTrue);
       // No size yet, should assert.
@@ -1984,7 +1987,7 @@ void main() {
       );
     });
 
-    testWidgets('use cacheExtentStyle', (WidgetTester tester) async {
+    testWidgets('use ScrollCacheExtent.viewport', (WidgetTester tester) async {
       final childKeys = <ChildVicinity, UniqueKey>{};
       final delegate = TwoDimensionalChildBuilderDelegate(
         maxXIndex: 5,
@@ -1999,8 +2002,7 @@ void main() {
       await tester.pumpWidget(
         simpleBuilderTest(
           delegate: delegate,
-          cacheExtent: 1.0,
-          cacheExtentStyle: CacheExtentStyle.viewport,
+          scrollCacheExtent: const ScrollCacheExtent.viewport(1.0),
           useCacheExtent: true,
         ),
       );
@@ -2010,7 +2012,7 @@ void main() {
       // The viewport is 800x600. The children are 200x200.
       // Without cache extent, it should show 4x3 = 12 children, but with the
       // trailing edge calculation it is 5x4 = 20.
-      // With cacheExtent: 1.0 and cacheExtentStyle: CacheExtentStyle.viewport,
+      // With scrollCacheExtent: ScrollCacheExtent.viewport(1.0),
       // The visible area will be from -800 to 800 + 800 = 1600 horizontally,
       // and -600 to 600 + 600 = 1200 vertically.
       // So, it should lay out children from (0,0) to (5,5).

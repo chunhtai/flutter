@@ -33,7 +33,7 @@ Future<void> test(WidgetTester tester, double offset, List<int> keys) {
     Directionality(
       textDirection: TextDirection.ltr,
       child: Viewport(
-        cacheExtent: 0.0,
+        scrollCacheExtent: const ScrollCacheExtent.pixels(0.0),
         offset: viewportOffset,
         slivers: <Widget>[
           SliverList.list(

@@ -950,7 +950,7 @@ void main() {
         Directionality(
           textDirection: TextDirection.ltr,
           child: CustomScrollView(
-            cacheExtent: cacheExtent,
+            scrollCacheExtent: const ScrollCacheExtent.pixels(cacheExtent),
             physics: const BouncingScrollPhysics(),
             slivers: <Widget>[
               SliverPersistentHeader(delegate: TestDelegate()),
@@ -980,7 +980,7 @@ void main() {
         Directionality(
           textDirection: TextDirection.ltr,
           child: CustomScrollView(
-            cacheExtent: cacheExtent,
+            scrollCacheExtent: const ScrollCacheExtent.pixels(cacheExtent),
             slivers: <Widget>[
               SliverPersistentHeader(key: key, delegate: delegate),
               const BigSliver(height: 550.0),
@@ -1023,7 +1023,7 @@ void main() {
         Directionality(
           textDirection: TextDirection.ltr,
           child: CustomScrollView(
-            cacheExtent: cacheExtent,
+            scrollCacheExtent: const ScrollCacheExtent.pixels(cacheExtent),
             slivers: <Widget>[
               SliverPersistentHeader(key: key, delegate: delegate),
               const BigSliver(height: 550.0),
@@ -1060,7 +1060,7 @@ void main() {
         Directionality(
           textDirection: TextDirection.ltr,
           child: CustomScrollView(
-            cacheExtent: cacheExtent,
+            scrollCacheExtent: const ScrollCacheExtent.pixels(cacheExtent),
             slivers: <Widget>[
               SliverPersistentHeader(key: key, delegate: delegate),
               const BigSliver(height: 550.0),

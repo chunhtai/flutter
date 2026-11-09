@@ -62,7 +62,7 @@ class BenchMouseRegionGridScroll extends WidgetRecorder {
           dimension: 400,
           child: ListView.builder(
             itemCount: rowsCount,
-            cacheExtent: rowsCount * containerSize,
+            scrollCacheExtent: const ScrollCacheExtent.pixels(rowsCount * containerSize),
             physics: const ClampingScrollPhysics(),
             itemBuilder: (BuildContext context, int rowIndex) => Row(
               children: List<Widget>.generate(

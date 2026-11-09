@@ -61,16 +61,6 @@ abstract class TwoDimensionalScrollView extends StatelessWidget {
     this.verticalDetails = const ScrollableDetails.vertical(),
     this.horizontalDetails = const ScrollableDetails.horizontal(),
     required this.delegate,
-    @Deprecated(
-      'Use scrollCacheExtent instead. '
-      'This feature was deprecated after v3.41.0-0.0.pre.',
-    )
-    this.cacheExtent,
-    @Deprecated(
-      'Use scrollCacheExtent instead. '
-      'This feature was deprecated after v3.41.0-0.0.pre.',
-    )
-    this.cacheExtentStyle,
     this.scrollCacheExtent,
     this.diagonalDragBehavior = DiagonalDragBehavior.none,
     this.dragStartBehavior = DragStartBehavior.start,
@@ -81,20 +71,6 @@ abstract class TwoDimensionalScrollView extends StatelessWidget {
 
   /// A delegate that provides the children for the [TwoDimensionalScrollView].
   final TwoDimensionalChildDelegate delegate;
-
-  /// {@macro flutter.rendering.RenderViewportBase.cacheExtent}
-  @Deprecated(
-    'Use scrollCacheExtent instead. '
-    'This feature was deprecated after v3.41.0-0.0.pre.',
-  )
-  final double? cacheExtent;
-
-  /// {@macro flutter.rendering.RenderViewportBase.cacheExtentStyle}
-  @Deprecated(
-    'Use scrollCacheExtent instead. '
-    'This feature was deprecated after v3.41.0-0.0.pre.',
-  )
-  final CacheExtentStyle? cacheExtentStyle;
 
   /// {@macro flutter.rendering.RenderViewportBase.scrollCacheExtent}
   final ScrollCacheExtent? scrollCacheExtent;

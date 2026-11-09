@@ -463,7 +463,7 @@ void main() {
           child: SizedBox(
             height: 200.0,
             child: ListView(
-              cacheExtent: 500.0,
+              scrollCacheExtent: const ScrollCacheExtent.pixels(500.0),
               controller: controller,
               children: const <Widget>[
                 SizedBox(height: 140.0, child: text),

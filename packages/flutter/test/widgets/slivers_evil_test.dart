@@ -225,7 +225,7 @@ void main() {
     await tester.pumpWidget(
       TestWidgetsApp(
         home: CustomScrollView(
-          cacheExtent: 0.0,
+          scrollCacheExtent: const ScrollCacheExtent.pixels(0.0),
           slivers: <Widget>[
             SliverFixedExtentList(
               itemExtent: 100.0,
@@ -257,7 +257,7 @@ void main() {
     await tester.pumpWidget(
       TestWidgetsApp(
         home: CustomScrollView(
-          cacheExtent: 0.0,
+          scrollCacheExtent: const ScrollCacheExtent.pixels(0.0),
           slivers: <Widget>[
             SliverFixedExtentList(
               itemExtent: 100.0,

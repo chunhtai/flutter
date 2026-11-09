@@ -65,11 +65,11 @@ void tests({required bool impliedMode}) {
       Directionality(
         textDirection: TextDirection.ltr,
         child: ListView(
+          scrollCacheExtent: const ScrollCacheExtent.pixels(0.0),
           addAutomaticKeepAlives: impliedMode,
           addRepaintBoundaries: impliedMode,
           addSemanticIndexes: false,
-          itemExtent: 12.3, // about 50 widgets visible
-          cacheExtent: 0.0,
+          itemExtent: 12.3,
           children: generateList(const Placeholder(), impliedMode: impliedMode),
         ),
       ),
@@ -113,10 +113,10 @@ void tests({required bool impliedMode}) {
       Directionality(
         textDirection: TextDirection.ltr,
         child: ListView(
+          scrollCacheExtent: const ScrollCacheExtent.pixels(0.0),
           addAutomaticKeepAlives: impliedMode,
           addRepaintBoundaries: impliedMode,
           addSemanticIndexes: false,
-          cacheExtent: 0.0,
           children: generateList(
             const SizedBox(height: 12.3, child: Placeholder()), // about 50 widgets visible
             impliedMode: impliedMode,
@@ -163,12 +163,12 @@ void tests({required bool impliedMode}) {
       Directionality(
         textDirection: TextDirection.ltr,
         child: GridView.count(
+          scrollCacheExtent: const ScrollCacheExtent.pixels(0.0),
           addAutomaticKeepAlives: impliedMode,
           addRepaintBoundaries: impliedMode,
           addSemanticIndexes: false,
           crossAxisCount: 2,
-          childAspectRatio: 400.0 / 24.6, // about 50 widgets visible
-          cacheExtent: 0.0,
+          childAspectRatio: 400.0 / 24.6,
           children: generateList(const Placeholder(), impliedMode: impliedMode),
         ),
       ),
@@ -221,10 +221,10 @@ void main() {
       Directionality(
         textDirection: TextDirection.ltr,
         child: ListView(
+          scrollCacheExtent: const ScrollCacheExtent.pixels(0.0),
           addAutomaticKeepAlives: false,
           addRepaintBoundaries: false,
           addSemanticIndexes: false,
-          cacheExtent: 0.0,
           children: const <Widget>[
             AutomaticKeepAlive(
               child: SizedBox(
@@ -297,10 +297,10 @@ void main() {
       Directionality(
         textDirection: TextDirection.ltr,
         child: ListView(
+          scrollCacheExtent: const ScrollCacheExtent.pixels(0.0),
           addAutomaticKeepAlives: false,
           addRepaintBoundaries: false,
           addSemanticIndexes: false,
-          cacheExtent: 0.0,
           children: const <Widget>[
             AutomaticKeepAlive(
               child: SizedBox(
@@ -360,10 +360,10 @@ void main() {
       Directionality(
         textDirection: TextDirection.ltr,
         child: ListView(
+          scrollCacheExtent: const ScrollCacheExtent.pixels(0.0),
           addAutomaticKeepAlives: false,
           addRepaintBoundaries: false,
           addSemanticIndexes: false,
-          cacheExtent: 0.0,
           children: const <Widget>[
             AutomaticKeepAlive(
               child: SizedBox(
@@ -432,10 +432,10 @@ void main() {
       Directionality(
         textDirection: TextDirection.ltr,
         child: ListView(
+          scrollCacheExtent: const ScrollCacheExtent.pixels(0.0),
           addAutomaticKeepAlives: false,
           addRepaintBoundaries: false,
           addSemanticIndexes: false,
-          cacheExtent: 0.0,
           children: const <Widget>[
             AutomaticKeepAlive(
               child: SizedBox(

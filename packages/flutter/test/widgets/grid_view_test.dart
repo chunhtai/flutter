@@ -454,7 +454,7 @@ void main() {
           child: SizedBox(
             height: 200.0,
             child: GridView.count(
-              cacheExtent: 0.0,
+              scrollCacheExtent: const ScrollCacheExtent.pixels(0.0),
               crossAxisCount: 2,
               children: <Widget>[container, container, container, container],
             ),

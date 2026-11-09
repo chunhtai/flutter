@@ -18,9 +18,9 @@ void main() {
     ];
     final childManager = TestRenderSliverBoxChildManager(children: children);
     final root = RenderViewport(
+      scrollCacheExtent: const ScrollCacheExtent.pixels(0),
       crossAxisDirection: AxisDirection.right,
       offset: ViewportOffset.zero(),
-      cacheExtent: 0,
       children: <RenderSliver>[childManager.createRenderSliverFillViewport()],
     );
     layout(root);
@@ -121,9 +121,9 @@ void main() {
     ];
     final childManager = TestRenderSliverBoxChildManager(children: children);
     final root = RenderViewport(
+      scrollCacheExtent: const ScrollCacheExtent.pixels(0),
       crossAxisDirection: AxisDirection.right,
       offset: ViewportOffset.zero(),
-      cacheExtent: 0,
       children: <RenderSliver>[childManager.createRenderSliverFillViewport()],
     );
     layout(root);
@@ -156,9 +156,9 @@ void main() {
     final childManager = TestRenderSliverBoxChildManager(children: children);
     final RenderSliverFillViewport sliver = childManager.createRenderSliverFillViewport();
     final root = RenderViewport(
+      scrollCacheExtent: const ScrollCacheExtent.pixels(100),
       crossAxisDirection: AxisDirection.right,
       offset: ViewportOffset.fixed(1200.0),
-      cacheExtent: 100,
       children: <RenderSliver>[sliver],
     );
     layout(root);
@@ -200,9 +200,9 @@ void main() {
     final childManager = TestRenderSliverBoxChildManager(children: children);
     final RenderSliverFillViewport sliver = childManager.createRenderSliverFillViewport();
     final root = RenderViewport(
+      scrollCacheExtent: const ScrollCacheExtent.pixels(100),
       crossAxisDirection: AxisDirection.right,
       offset: ViewportOffset.zero(),
-      cacheExtent: 100,
       children: <RenderSliver>[sliver],
     );
     layout(root);
@@ -244,9 +244,9 @@ void main() {
     final childManager = TestRenderSliverBoxChildManager(children: children);
     final RenderSliverFixedExtentList sliver = childManager.createRenderSliverFixedExtentList(30.0);
     final root = RenderViewport(
+      scrollCacheExtent: const ScrollCacheExtent.pixels(100),
       crossAxisDirection: AxisDirection.right,
       offset: ViewportOffset.fixed(45.0),
-      cacheExtent: 100,
       children: <RenderSliver>[sliver],
     );
     layout(root);
@@ -289,9 +289,9 @@ void main() {
     final childManager = TestRenderSliverBoxChildManager(children: children);
     final RenderSliverFixedExtentList sliver = childManager.createRenderSliverFixedExtentList(30.0);
     final root = RenderViewport(
+      scrollCacheExtent: const ScrollCacheExtent.pixels(100),
       crossAxisDirection: AxisDirection.right,
       offset: ViewportOffset.zero(),
-      cacheExtent: 100,
       children: <RenderSliver>[sliver],
     );
     layout(root);
@@ -334,9 +334,9 @@ void main() {
     final childManager = TestRenderSliverBoxChildManager(children: children);
     final RenderSliverFixedExtentList sliver = childManager.createRenderSliverFixedExtentList(30.0);
     final root = RenderViewport(
+      scrollCacheExtent: const ScrollCacheExtent.pixels(100),
       crossAxisDirection: AxisDirection.right,
       offset: ViewportOffset.zero(),
-      cacheExtent: 100,
       children: <RenderSliver>[sliver],
     );
     layout(root);

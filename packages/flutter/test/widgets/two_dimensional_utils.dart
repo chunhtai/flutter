@@ -6,7 +6,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show clampDouble;
 import 'package:flutter/gestures.dart' show DragStartBehavior;
-import 'package:flutter/rendering.dart' show CacheExtentStyle, ViewportOffset;
+import 'package:flutter/rendering.dart' show CacheExtentStyle, ScrollCacheExtent, ViewportOffset;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -38,8 +38,7 @@ Widget simpleBuilderTest({
   ScrollableDetails? verticalDetails,
   ScrollableDetails? horizontalDetails,
   TwoDimensionalChildBuilderDelegate? delegate,
-  double? cacheExtent,
-  CacheExtentStyle? cacheExtentStyle,
+  ScrollCacheExtent? scrollCacheExtent,
   DiagonalDragBehavior? diagonalDrag,
   Clip? clipBehavior,
   String? restorationID,
@@ -55,8 +54,7 @@ Widget simpleBuilderTest({
         mainAxis: mainAxis,
         verticalDetails: verticalDetails ?? const ScrollableDetails.vertical(),
         horizontalDetails: horizontalDetails ?? const ScrollableDetails.horizontal(),
-        cacheExtent: cacheExtent,
-        cacheExtentStyle: cacheExtentStyle,
+        scrollCacheExtent: scrollCacheExtent,
         useCacheExtent: useCacheExtent,
         diagonalDragBehavior: diagonalDrag ?? DiagonalDragBehavior.none,
         clipBehavior: clipBehavior ?? Clip.hardEdge,
@@ -77,8 +75,7 @@ class SimpleBuilderTableView extends TwoDimensionalScrollView {
     super.verticalDetails = const ScrollableDetails.vertical(),
     super.horizontalDetails = const ScrollableDetails.horizontal(),
     required TwoDimensionalChildBuilderDelegate super.delegate,
-    super.cacheExtent,
-    super.cacheExtentStyle,
+    super.scrollCacheExtent,
     super.diagonalDragBehavior = DiagonalDragBehavior.none,
     super.dragStartBehavior = DragStartBehavior.start,
     super.keyboardDismissBehavior = ScrollViewKeyboardDismissBehavior.manual,
@@ -109,8 +106,7 @@ class SimpleBuilderTableView extends TwoDimensionalScrollView {
       verticalAxisDirection: verticalDetails.direction,
       mainAxis: mainAxis,
       delegate: delegate as TwoDimensionalChildBuilderDelegate,
-      cacheExtent: cacheExtent,
-      cacheExtentStyle: cacheExtentStyle,
+      scrollCacheExtent: scrollCacheExtent,
       clipBehavior: clipBehavior,
       useCacheExtent: useCacheExtent,
       applyDimensions: applyDimensions,
@@ -129,8 +125,7 @@ class SimpleBuilderTableViewport extends TwoDimensionalViewport {
     required super.horizontalAxisDirection,
     required TwoDimensionalChildBuilderDelegate super.delegate,
     required super.mainAxis,
-    super.cacheExtent,
-    super.cacheExtentStyle,
+    super.scrollCacheExtent,
     super.clipBehavior = Clip.hardEdge,
     this.useCacheExtent = false,
     this.applyDimensions = true,
@@ -154,8 +149,7 @@ class SimpleBuilderTableViewport extends TwoDimensionalViewport {
       mainAxis: mainAxis,
       delegate: delegate as TwoDimensionalChildBuilderDelegate,
       childManager: context as TwoDimensionalChildManager,
-      cacheExtent: cacheExtent,
-      cacheExtentStyle: cacheExtentStyle,
+      scrollCacheExtent: scrollCacheExtent,
       clipBehavior: clipBehavior,
       useCacheExtent: useCacheExtent,
       applyDimensions: applyDimensions,
@@ -173,8 +167,7 @@ class SimpleBuilderTableViewport extends TwoDimensionalViewport {
       ..verticalAxisDirection = verticalAxisDirection
       ..mainAxis = mainAxis
       ..delegate = delegate
-      ..cacheExtent = cacheExtent
-      ..cacheExtentStyle = cacheExtentStyle
+      ..scrollCacheExtent = scrollCacheExtent
       ..clipBehavior = clipBehavior;
   }
 }
@@ -188,8 +181,7 @@ class RenderSimpleBuilderTableViewport extends RenderTwoDimensionalViewport {
     required TwoDimensionalChildBuilderDelegate super.delegate,
     required super.mainAxis,
     required super.childManager,
-    super.cacheExtent,
-    super.cacheExtentStyle,
+    super.scrollCacheExtent,
     super.clipBehavior = Clip.hardEdge,
     this.applyDimensions = true,
     this.setLayoutOffset = true,
@@ -224,11 +216,11 @@ class RenderSimpleBuilderTableViewport extends RenderTwoDimensionalViewport {
     // Every child is 200x200 square
     final double horizontalPixels = horizontalOffset.pixels;
     final double verticalPixels = verticalOffset.pixels;
-    final double cacheExtentValue = useCacheExtent ? cacheExtent : 0.0;
+    final double cacheExtentValue = useCacheExtent ? scrollCacheExtent.value : 0.0;
     final double horizontalCacheExtent;
     final double verticalCacheExtent;
 
-    switch (cacheExtentStyle) {
+    switch (scrollCacheExtent.style) {
       case CacheExtentStyle.pixel:
         horizontalCacheExtent = cacheExtentValue;
         verticalCacheExtent = cacheExtentValue;
@@ -313,8 +305,7 @@ Widget simpleListTest({
   ScrollableDetails? verticalDetails,
   ScrollableDetails? horizontalDetails,
   TwoDimensionalChildListDelegate? delegate,
-  double? cacheExtent,
-  CacheExtentStyle? cacheExtentStyle,
+  ScrollCacheExtent? scrollCacheExtent,
   DiagonalDragBehavior? diagonalDrag,
   Clip? clipBehavior,
 }) {
@@ -324,8 +315,7 @@ Widget simpleListTest({
         mainAxis: mainAxis,
         verticalDetails: verticalDetails ?? const ScrollableDetails.vertical(),
         horizontalDetails: horizontalDetails ?? const ScrollableDetails.horizontal(),
-        cacheExtent: cacheExtent,
-        cacheExtentStyle: cacheExtentStyle,
+        scrollCacheExtent: scrollCacheExtent,
         diagonalDragBehavior: diagonalDrag ?? DiagonalDragBehavior.none,
         clipBehavior: clipBehavior ?? Clip.hardEdge,
         delegate: delegate ?? TwoDimensionalChildListDelegate(children: children),
@@ -342,8 +332,7 @@ class SimpleListTableView extends TwoDimensionalScrollView {
     super.verticalDetails = const ScrollableDetails.vertical(),
     super.horizontalDetails = const ScrollableDetails.horizontal(),
     required super.delegate,
-    super.cacheExtent,
-    super.cacheExtentStyle,
+    super.scrollCacheExtent,
     super.diagonalDragBehavior = DiagonalDragBehavior.none,
     super.dragStartBehavior = DragStartBehavior.start,
     super.keyboardDismissBehavior = ScrollViewKeyboardDismissBehavior.manual,
@@ -363,8 +352,7 @@ class SimpleListTableView extends TwoDimensionalScrollView {
       verticalAxisDirection: verticalDetails.direction,
       mainAxis: mainAxis,
       delegate: delegate as TwoDimensionalChildListDelegate,
-      cacheExtent: cacheExtent,
-      cacheExtentStyle: cacheExtentStyle,
+      scrollCacheExtent: scrollCacheExtent,
       clipBehavior: clipBehavior,
     );
   }
@@ -379,8 +367,7 @@ class SimpleListTableViewport extends TwoDimensionalViewport {
     required super.horizontalAxisDirection,
     required TwoDimensionalChildListDelegate super.delegate,
     required super.mainAxis,
-    super.cacheExtent,
-    super.cacheExtentStyle,
+    super.scrollCacheExtent,
     super.clipBehavior = Clip.hardEdge,
   });
 
@@ -394,8 +381,7 @@ class SimpleListTableViewport extends TwoDimensionalViewport {
       mainAxis: mainAxis,
       delegate: delegate as TwoDimensionalChildListDelegate,
       childManager: context as TwoDimensionalChildManager,
-      cacheExtent: cacheExtent,
-      cacheExtentStyle: cacheExtentStyle,
+      scrollCacheExtent: scrollCacheExtent,
       clipBehavior: clipBehavior,
     );
   }
@@ -409,8 +395,7 @@ class SimpleListTableViewport extends TwoDimensionalViewport {
       ..verticalAxisDirection = verticalAxisDirection
       ..mainAxis = mainAxis
       ..delegate = delegate
-      ..cacheExtent = cacheExtent
-      ..cacheExtentStyle = cacheExtentStyle
+      ..scrollCacheExtent = scrollCacheExtent
       ..clipBehavior = clipBehavior;
   }
 }
@@ -424,8 +409,7 @@ class RenderSimpleListTableViewport extends RenderTwoDimensionalViewport {
     required TwoDimensionalChildListDelegate super.delegate,
     required super.mainAxis,
     required super.childManager,
-    super.cacheExtent,
-    super.cacheExtentStyle,
+    super.scrollCacheExtent,
     super.clipBehavior = Clip.hardEdge,
   });
 

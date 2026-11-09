@@ -18,9 +18,9 @@ void main() {
     // Viewport is 800x600, can show 6 children at a time.
 
     final root = RenderViewport(
+      scrollCacheExtent: const ScrollCacheExtent.pixels(250.0),
       crossAxisDirection: AxisDirection.right,
       offset: ViewportOffset.zero(),
-      cacheExtent: 250.0,
       children: children,
     );
     layout(root);
@@ -256,9 +256,9 @@ void main() {
     final childManager = TestRenderSliverBoxChildManager(children: children);
     RenderSliverFixedExtentList inner;
     final root = RenderViewport(
+      scrollCacheExtent: const ScrollCacheExtent.pixels(250.0),
       crossAxisDirection: AxisDirection.right,
       offset: ViewportOffset.zero(),
-      cacheExtent: 250.0,
       children: <RenderSliver>[inner = childManager.createRenderSliverFixedExtentList()],
     );
     layout(root);
@@ -330,9 +330,9 @@ void main() {
     final childManager = TestRenderSliverBoxChildManager(children: children);
     RenderSliverList inner;
     final root = RenderViewport(
+      scrollCacheExtent: const ScrollCacheExtent.pixels(250.0),
       crossAxisDirection: AxisDirection.right,
       offset: ViewportOffset.zero(),
-      cacheExtent: 250.0,
       children: <RenderSliver>[inner = childManager.createRenderSliverList()],
     );
     layout(root);
@@ -404,9 +404,9 @@ void main() {
     final childManager = TestRenderSliverBoxChildManager(children: children);
     RenderSliverGrid inner;
     final root = RenderViewport(
+      scrollCacheExtent: const ScrollCacheExtent.pixels(250.0),
       crossAxisDirection: AxisDirection.right,
       offset: ViewportOffset.zero(),
-      cacheExtent: 250.0,
       children: <RenderSliver>[inner = childManager.createRenderSliverGrid()],
     );
     layout(root);
@@ -485,9 +485,9 @@ void main() {
     });
 
     final root = RenderViewport(
+      scrollCacheExtent: const ScrollCacheExtent.pixels(250.0),
       crossAxisDirection: AxisDirection.right,
       offset: ViewportOffset.zero(),
-      cacheExtent: 250.0,
       children: paddings,
     );
     layout(root);
@@ -770,9 +770,9 @@ void main() {
       ];
 
       final root = RenderViewport(
+        scrollCacheExtent: const ScrollCacheExtent.pixels(cacheExtent),
         crossAxisDirection: AxisDirection.right,
         offset: ViewportOffset.zero(),
-        cacheExtent: cacheExtent,
         children: slivers,
       );
       layout(root);
@@ -872,9 +872,9 @@ void main() {
       ];
 
       final root = RenderViewport(
+        scrollCacheExtent: const ScrollCacheExtent.pixels(cacheExtent),
         crossAxisDirection: AxisDirection.right,
         offset: ViewportOffset.zero(),
-        cacheExtent: cacheExtent,
         children: slivers,
       );
       layout(root);
@@ -1059,9 +1059,9 @@ void main() {
       ];
 
       final root = RenderViewport(
+        scrollCacheExtent: const ScrollCacheExtent.pixels(cacheExtent),
         crossAxisDirection: AxisDirection.right,
         offset: ViewportOffset.zero(),
-        cacheExtent: cacheExtent,
         children: slivers,
       );
       layout(root);
@@ -1165,9 +1165,9 @@ void main() {
       ];
 
       final root = RenderViewport(
+        scrollCacheExtent: const ScrollCacheExtent.pixels(cacheExtent),
         crossAxisDirection: AxisDirection.right,
         offset: ViewportOffset.zero(),
-        cacheExtent: cacheExtent,
         children: slivers,
       );
       layout(root);
@@ -1360,9 +1360,9 @@ void main() {
       ];
 
       final root = RenderViewport(
+        scrollCacheExtent: const ScrollCacheExtent.pixels(cacheExtent),
         crossAxisDirection: AxisDirection.right,
         offset: ViewportOffset.zero(),
-        cacheExtent: cacheExtent,
         children: slivers,
       );
       layout(root);
@@ -1494,9 +1494,9 @@ void main() {
       ];
 
       final root = RenderViewport(
+        scrollCacheExtent: const ScrollCacheExtent.pixels(cacheExtent),
         crossAxisDirection: AxisDirection.right,
         offset: ViewportOffset.zero(),
-        cacheExtent: cacheExtent,
         children: slivers,
       );
       layout(root);

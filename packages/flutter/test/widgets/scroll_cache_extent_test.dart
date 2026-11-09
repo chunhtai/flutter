@@ -180,9 +180,6 @@ void main() {
     );
     final RenderViewport viewport = tester.renderObject(find.byType(Viewport));
     expect(viewport.scrollCacheExtent, const ScrollCacheExtent.pixels(100));
-    // The deprecated getter should still return the value.
-    expect(viewport.cacheExtent, 100);
-    expect(viewport.cacheExtentStyle, CacheExtentStyle.pixel);
   });
 
   testWidgets('ScrollView respects scrollCacheExtent (viewport)', (WidgetTester tester) async {
@@ -194,9 +191,6 @@ void main() {
     );
     final RenderViewport viewport = tester.renderObject(find.byType(Viewport));
     expect(viewport.scrollCacheExtent, const ScrollCacheExtent.viewport(2.0));
-    // The deprecated getter should still return the value.
-    expect(viewport.cacheExtent, 2.0);
-    expect(viewport.cacheExtentStyle, CacheExtentStyle.viewport);
   });
 
   testWidgets('Semantics nodes in cache extent are marked as hidden', (WidgetTester tester) async {

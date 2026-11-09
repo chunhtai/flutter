@@ -23,8 +23,8 @@ void main() {
             child: SizedBox(
               width: 200,
               child: ListView.builder(
+                scrollCacheExtent: const ScrollCacheExtent.pixels(0.0),
                 controller: controller,
-                cacheExtent: 0.0,
                 itemBuilder: (BuildContext context, int index) {
                   return Container(
                     height: 100.0,
@@ -69,8 +69,8 @@ void main() {
             child: SizedBox(
               width: 200,
               child: ListView.builder(
+                scrollCacheExtent: const ScrollCacheExtent.pixels(0.0),
                 controller: controller,
-                cacheExtent: 0.0,
                 itemBuilder: (BuildContext context, int index) {
                   return Container(
                     height: 100.0,
@@ -115,8 +115,8 @@ void main() {
             child: SizedBox(
               width: 200,
               child: ListView.builder(
+                scrollCacheExtent: const ScrollCacheExtent.pixels(0.0),
                 controller: controller,
-                cacheExtent: 0.0,
                 itemBuilder: (BuildContext context, int index) {
                   return Container(
                     height: 100.0,
@@ -159,8 +159,8 @@ void main() {
             child: SizedBox(
               width: 200,
               child: ListView.builder(
+                scrollCacheExtent: const ScrollCacheExtent.pixels(0.0),
                 controller: controller,
-                cacheExtent: 0.0,
                 itemBuilder: (BuildContext context, int index) {
                   return Container(
                     height: 100.0,

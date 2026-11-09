@@ -16,9 +16,9 @@ void main() {
       child: RenderSizedBox(const Size(400.0, 100.0)),
     );
     final root = RenderViewport(
+      scrollCacheExtent: const ScrollCacheExtent.pixels(0),
       crossAxisDirection: AxisDirection.right,
       offset: ViewportOffset.zero(),
-      cacheExtent: 0,
       children: <RenderSliver>[header],
     );
     layout(root);
@@ -31,9 +31,9 @@ void main() {
       child: RenderSizedBox(const Size(400.0, 100.0)),
     );
     final root = RenderViewport(
+      scrollCacheExtent: const ScrollCacheExtent.pixels(0),
       crossAxisDirection: AxisDirection.right,
       offset: ViewportOffset.zero(),
-      cacheExtent: 0,
       children: <RenderSliver>[header],
     );
     layout(root);
